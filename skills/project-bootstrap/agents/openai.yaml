@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Bootstrap"
+  short_description: "Set up a complete research or teaching project"
+  default_prompt: "Use $project-bootstrap to set up a new research project."
