@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+set -eu
+
+: "${FAKE_GH_STATE:?FAKE_GH_STATE is required}"
+: "${FAKE_GH_LOG:?FAKE_GH_LOG is required}"
+
+for logged_arg in "$@"; do
+  printf '%q ' "$logged_arg" >>"$FAKE_GH_LOG"
+done
+printf '\n' >>"$FAKE_GH_LOG"
+
+group="${1:-}"
+action="${2:-}"
+if [ "$#" -ge 2 ]; then
+  shift 2
+fi
+
+find_option() {
+  local wanted="$1"
+  shift
+  while [ "$#" -gt 0 ]; do
+    if [ "$1" = "$wanted" ]; then
+      [ "$#" -ge 2 ] || exit 90
+      printf '%s\n' "$2"
+      return 0
+    fi
+    shift
+  done
+  return 1
+}
+
+case "$group:$action" in
+  auth:status)
+    exit 0
+    ;;
+
+  repo:view)
+    requested_repository="$1"
+    shift
+    [ -f "$FAKE_GH_STATE/repo.tsv" ] || exit 1
+    IFS=$'\t' read -r stored_repository stored_visibility stored_url \
+      <"$FAKE_GH_STATE/repo.tsv"
+    [ "$requested_repository" = "$stored_repository" ] || exit 1
+    jq_filter="$(find_option --jq "$@" || true)"
+    case "$jq_filter" in
+      .visibility) printf '%s\n' "$stored_visibility" ;;
+      *)
+        printf '{"nameWithOwner":"%s","url":"%s","visibility":"%s","defaultBranchRef":{"name":"main"}}\n' \
+          "$stored_repository" "$stored_url" "$stored_visibility"
+        ;;
+    esac
+    ;;
+
+  repo:create)
+    requested_repository="$1"
+    shift
+    requested_visibility=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --public) requested_visibility="PUBLIC" ;;
+        --private) requested_visibility="PRIVATE" ;;
+        --internal) requested_visibility="INTERNAL" ;;
+      esac
+      shift
+    done
+    [ -n "$requested_visibility" ] || exit 91
+    printf '%s\t%s\thttps://github.com/%s\n' \
+      "$requested_repository" "$requested_visibility" "$requested_repository" \
+      >"$FAKE_GH_STATE/repo.tsv"
+    ;;
+
+  project:list)
+    if [ -f "$FAKE_GH_STATE/projects.tsv" ]; then
+      while IFS=$'\t' read -r stored_number stored_title stored_url; do
+        printf '%s\t%s\n' "$stored_number" "$stored_title"
+      done <"$FAKE_GH_STATE/projects.tsv"
+    fi
+    ;;
+
+  project:view)
+    requested_number="$1"
+    shift
+    [ -f "$FAKE_GH_STATE/projects.tsv" ] || exit 1
+    found_title=""
+    found_url=""
+    while IFS=$'\t' read -r stored_number stored_title stored_url; do
+      if [ "$stored_number" = "$requested_number" ]; then
+        found_title="$stored_title"
+        found_url="$stored_url"
+        break
+      fi
+    done <"$FAKE_GH_STATE/projects.tsv"
+    [ -n "$found_title" ] || exit 1
+    jq_filter="$(find_option --jq "$@" || true)"
+    case "$jq_filter" in
+      .title) printf '%s\n' "$found_title" ;;
+      *)
+        printf '{"number":%s,"title":"%s","url":"%s","closed":false}\n' \
+          "$requested_number" "$found_title" "$found_url"
+        ;;
+    esac
+    ;;
+
+  project:create)
+    requested_owner="$(find_option --owner "$@")"
+    requested_title="$(find_option --title "$@")"
+    requested_number=7
+    requested_url="https://github.com/users/$requested_owner/projects/$requested_number"
+    printf '%s\t%s\t%s\n' "$requested_number" "$requested_title" "$requested_url" \
+      >>"$FAKE_GH_STATE/projects.tsv"
+    jq_filter="$(find_option --jq "$@" || true)"
+    if [ "$jq_filter" = ".number" ]; then
+      printf '%s\n' "$requested_number"
+    else
+      printf '{"number":%s,"title":"%s","url":"%s"}\n' \
+        "$requested_number" "$requested_title" "$requested_url"
+    fi
+    ;;
+
+  *)
+    printf 'Unsupported fake gh call: %s %s\n' "$group" "$action" >&2
+    exit 92
+    ;;
+esac
