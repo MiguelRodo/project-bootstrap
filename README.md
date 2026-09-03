@@ -123,6 +123,52 @@ pjcp --model gpt-5.6-terra -- "Review issue #12"
 pjcd -m gpt-5.6-sol -- "Review issue #12"
 ```
 
+### Conversational sessions
+
+When `pj`, `pja`, `pjcp` or `pjcd` is run from an ordinary terminal with an
+initial prompt, the default behaviour is conversational rather than one-shot.
+The first request is executed and the selected agent remains open so follow-up
+prompts can be typed directly into the same TUI. For example:
+
+```bash
+pja -- "Assess the stimgate project"
+```
+
+After Antigravity answers, stay in that Antigravity session and type a follow-up
+such as:
+
+```text
+Tackle the last two things you suggested.
+```
+
+Do not type `pj` again while still inside the agent TUI. Exiting the TUI returns
+to the shell.
+
+The launcher uses each provider's supported conversation mechanism:
+
+- Codex receives the prompt as the initial prompt to its ordinary interactive
+  TUI.
+- Copilot uses `-i` / `--interactive` so the initial prompt runs and the session
+  remains open.
+- Antigravity does not currently document an interactive initial-prompt flag,
+  so `pj` seeds the request with one `agy -p` turn and immediately resumes that
+  newly created workspace conversation with `agy --continue`.
+
+In non-interactive contexts such as pipelines and command substitution, `pj`
+uses the one-shot interface automatically. Force one-shot behaviour from a
+terminal with `--oneshot` before any agent-specific options or prompt text:
+
+```bash
+pja --oneshot -- "Assess the stimgate project"
+pjcp --oneshot -- "Assess the stimgate project"
+pjcd --oneshot -- "Assess the stimgate project"
+```
+
+`PJ_SESSION_MODE` may be set to `auto`, `interactive` or `oneshot`. `auto` is the
+default and chooses interactive mode only when stdin and stdout are attached to
+a terminal. An explicit `--oneshot` overrides `PJ_SESSION_MODE=interactive` for
+that invocation.
+
 The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
 `~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
 and can be changed with `PJ_WORKSPACE`.
@@ -148,15 +194,15 @@ pja "Create the issue - keep this dash as text"
 pja --effort medium -- "Review issue #12 - do not edit it"
 ```
 
-For one-shot Antigravity requests the launcher uses headless `agy -p`, high
-reasoning effort by default and automatic tool approval. Ordinary `pja` runs do
-not force the terminal sandbox because Project administration needs live `gh`
-and provider API access; request `--sandbox` explicitly when that restriction is
-wanted. Headless runs use a 15-minute response timeout by default, configurable
-with `PJ_ANTIGRAVITY_TIMEOUT` or a one-run `--print-timeout` option. Automatic
-tool approval is deliberately broad because headless mode cannot stop for tool
-approval, so use this operator launcher only for requests you intend the agent
-to execute.
+Ordinary terminal `pja` runs stay conversational as described above. The
+initial Antigravity turn uses high reasoning effort by default and automatic
+tool approval. `pja` does not force the terminal sandbox because Project
+administration needs live `gh` and provider API access; request `--sandbox`
+explicitly when that restriction is wanted. Headless seed or one-shot turns use
+a 15-minute response timeout by default, configurable with
+`PJ_ANTIGRAVITY_TIMEOUT` or a one-run `--print-timeout` option. Automatic tool
+approval is deliberately broad, so use this operator launcher only for requests
+you intend the agent to execute.
 
 GitHub Copilot CLI is available through `pjcp` after `copilot` is installed and
 authenticated:
@@ -166,10 +212,9 @@ pjcp "Create the issue - keep this dash as text"
 pjcp --model auto -- "Review issue #12 - do not edit it"
 ```
 
-For one-shot Copilot requests the launcher uses the official programmatic
-`copilot -p` interface and grants all tool, path and URL permissions with
-`--allow-all`, matching the unattended operator model used by the other
-backends.
+Ordinary terminal `pjcp` runs use Copilot's interactive initial-prompt mode and
+grant all tool, path and URL permissions with `--allow-all`. One-shot or
+non-interactive runs use the official `copilot -p` interface instead.
 
 Codex remains directly available through `pjcd` regardless of the saved `pj`
 default:
@@ -177,6 +222,9 @@ default:
 ```bash
 pjcd "Review the current project"
 ```
+
+Ordinary terminal Codex runs use the interactive TUI. One-shot or
+non-interactive runs use `codex exec`.
 
 The long forms remain available when useful:
 
