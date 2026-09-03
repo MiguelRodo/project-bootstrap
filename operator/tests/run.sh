@@ -93,6 +93,28 @@ assert_contains "$codex_options" '<--model>'
 assert_contains "$codex_options" '<test-model>'
 assert_contains "$codex_options" '<Prompt - with dash>'
 
+implement_short="$(run_named pj -i)" || exit 1
+assert_contains "$implement_short" 'codex'
+assert_contains "$implement_short" '<Process the Chat implementation queue across the managed repositories in this workspace.'
+assert_contains "$implement_short" 'references/local-implementation-queue.md'
+assert_contains "$implement_short" 'without asking for a routine preview'
+
+implement_issues="$(run_named pj --implement-issues)" || exit 1
+assert_contains "$implement_issues" '<Process the Chat implementation queue across the managed repositories in this workspace.'
+
+implement_chat="$(run_named pj --implement-chat)" || exit 1
+assert_contains "$implement_chat" '<Process the Chat implementation queue across the managed repositories in this workspace.'
+
+implement_copilot="$(run_named pj --backend copilot -i)" || exit 1
+assert_contains "$implement_copilot" 'copilot'
+assert_contains "$implement_copilot" '<mai-code-1.1-flash>'
+assert_contains "$implement_copilot" '<Process the Chat implementation queue across the managed repositories in this workspace.'
+
+if run_named pj -i extra >/dev/null 2>&1; then
+  echo 'pj -i unexpectedly accepted extra arguments' >&2
+  exit 1
+fi
+
 agy_alias="$(run_named pja Create the issue - with a dash)" || exit 1
 assert_contains "$agy_alias" 'agy'
 assert_contains "$agy_alias" '<--dangerously-skip-permissions>'
