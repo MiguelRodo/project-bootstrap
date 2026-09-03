@@ -48,12 +48,28 @@ installer once per machine from a checkout of this repository:
 bash operator/install.sh
 ```
 
-It installs four launcher names into `~/bin`:
+It installs four launcher names into a sensible per-user executable directory:
 
 - `pj` uses the configured default backend;
 - `pja` always selects Google Antigravity;
 - `pjcp` always selects GitHub Copilot CLI;
 - `pjcd` always selects Codex.
+
+The installer prefers `~/.local/bin` when it is already on `PATH`, then `~/bin`
+when that is the configured standard user bin directory. If neither is on
+`PATH`, it prefers an existing `~/.local/bin` or `~/bin`, in that order, and
+otherwise creates `~/.local/bin`. The selected directory is recorded in
+`${XDG_CONFIG_HOME:-~/.config}/pj/install-bin-dir` so a later reinstall can
+safely migrate an older installer-managed location rather than leave a stale
+launcher shadowing the current one.
+
+Set `PJ_BIN_DIR` to choose a different absolute or home-relative location for an
+install, for example:
+
+```bash
+PJ_BIN_DIR='~/.local/bin' bash operator/install.sh
+PJ_BIN_DIR='~/tools/bin' bash operator/install.sh
+```
 
 A new install starts with Codex as the `pj` default. Change or inspect that saved
 default with:
