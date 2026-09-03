@@ -2,17 +2,121 @@
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 1
 launcher_source="$script_dir/pj"
-launcher_dir="$HOME/bin"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_dir="$config_home/pj"
+default_backend_file="$config_dir/default-backend"
+install_bin_dir_file="$config_dir/install-bin-dir"
+
+path_contains_dir() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+expand_home_path() {
+  case "$1" in
+    "~")
+      printf '%s\n' "$HOME"
+      ;;
+    "~/"*)
+      printf '%s/%s\n' "$HOME" "${1:2}"
+      ;;
+    *)
+      printf '%s\n' "$1"
+      ;;
+  esac
+}
+
+choose_launcher_dir() {
+  if [ -n "${PJ_BIN_DIR:-}" ]; then
+    explicit_dir="$(expand_home_path "$PJ_BIN_DIR")" || return 1
+    case "$explicit_dir" in
+      /*) ;;
+      *)
+        printf 'pj installer: PJ_BIN_DIR must resolve to an absolute path: %s\n' "$PJ_BIN_DIR" >&2
+        return 2
+        ;;
+    esac
+    printf '%s\n' "$explicit_dir"
+    return
+  fi
+
+  # Prefer standard per-user executable directories that already work in the
+  # current shell. ~/.local/bin is the conventional first choice; ~/bin stays
+  # supported for environments that already use it.
+  for candidate in "$HOME/.local/bin" "$HOME/bin"; do
+    if path_contains_dir "$candidate"; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+
+  # If neither is currently on PATH, prefer an existing standard directory.
+  for candidate in "$HOME/.local/bin" "$HOME/bin"; do
+    if [ -d "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+
+  # New environments default to the freedesktop-style user-local location.
+  printf '%s\n' "$HOME/.local/bin"
+}
+
+launcher_dir="$(choose_launcher_dir)" || exit $?
 launcher_target="$launcher_dir/pj"
 antigravity_target="$launcher_dir/pja"
 copilot_target="$launcher_dir/pjcp"
 codex_target="$launcher_dir/pjcd"
 legacy_copilot_target="$launcher_dir/pjc"
-config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-config_dir="$config_home/pj"
-default_backend_file="$config_dir/default-backend"
 
 mkdir -p "$launcher_dir" "$config_dir" || exit 1
+
+managed_aliases_point_to() {
+  target="$1"
+  shift
+  for alias_path in "$@"; do
+    [ -L "$alias_path" ] || return 1
+    [ "$(readlink "$alias_path")" = "$target" ] || return 1
+  done
+}
+
+remove_previous_managed_install() {
+  previous_dir="$1"
+  [ -n "$previous_dir" ] || return 0
+  [ "$previous_dir" != "$launcher_dir" ] || return 0
+
+  previous_target="$previous_dir/pj"
+  previous_pja="$previous_dir/pja"
+  previous_pjcp="$previous_dir/pjcp"
+  previous_pjcd="$previous_dir/pjcd"
+  previous_pjc="$previous_dir/pjc"
+
+  # Only treat the directory as installer-managed when all three current
+  # shorthand symlinks point at its pj launcher. This avoids deleting unrelated
+  # user files while still allowing safe migration away from an older install.
+  if managed_aliases_point_to "$previous_target" \
+      "$previous_pja" "$previous_pjcp" "$previous_pjcd"; then
+    rm -f "$previous_pja" "$previous_pjcp" "$previous_pjcd" || exit 1
+    if [ -L "$previous_pjc" ] && [ "$(readlink "$previous_pjc")" = "$previous_target" ]; then
+      rm -f "$previous_pjc" || exit 1
+    fi
+    rm -f "$previous_target" || exit 1
+    printf 'Removed previous managed pj install from %s\n' "$previous_dir"
+  fi
+}
+
+if [ -f "$install_bin_dir_file" ]; then
+  previous_launcher_dir=""
+  IFS= read -r previous_launcher_dir < "$install_bin_dir_file" || true
+  remove_previous_managed_install "$previous_launcher_dir"
+elif [ "$launcher_dir" != "$HOME/bin" ]; then
+  # Migrate the historical pre-tracking installer layout when its managed
+  # symlink pattern proves that ~/bin contains the old pj installation.
+  remove_previous_managed_install "$HOME/bin"
+fi
+
 install -m 0755 "$launcher_source" "$launcher_target" || exit 1
 ln -sfn "$launcher_target" "$antigravity_target" || exit 1
 ln -sfn "$launcher_target" "$copilot_target" || exit 1
@@ -23,6 +127,8 @@ ln -sfn "$launcher_target" "$codex_target" || exit 1
 if [ -L "$legacy_copilot_target" ] && [ "$(readlink "$legacy_copilot_target")" = "$launcher_target" ]; then
   rm -f "$legacy_copilot_target" || exit 1
 fi
+
+printf '%s\n' "$launcher_dir" > "$install_bin_dir_file" || exit 1
 
 # Preserve an existing configured default across reinstalls. New installs start
 # with Codex until the operator selects another backend.
@@ -99,6 +205,7 @@ printf 'Installed pj at %s\n' "$launcher_target"
 printf 'Installed pja -> pj at %s\n' "$antigravity_target"
 printf 'Installed pjcp -> pj at %s\n' "$copilot_target"
 printf 'Installed pjcd -> pj at %s\n' "$codex_target"
+printf 'Recorded pj install directory in %s\n' "$install_bin_dir_file"
 printf 'Configured pj default backend in %s\n' "$default_backend_file"
 printf 'Updated Antigravity global context at %s\n' "$gemini_context"
 printf 'Updated Copilot global context at %s\n' "$copilot_context"
@@ -115,10 +222,6 @@ if ! command -v copilot >/dev/null 2>&1; then
   printf 'Note: copilot is not currently on PATH. Install and authenticate GitHub Copilot CLI before using pjcp.\n' >&2
 fi
 
-case ":$PATH:" in
-  *":$launcher_dir:"*)
-    ;;
-  *)
-    printf 'Note: %s is not currently on PATH. Add it in your shell startup file.\n' "$launcher_dir" >&2
-    ;;
-esac
+if ! path_contains_dir "$launcher_dir"; then
+  printf 'Note: %s is not currently on PATH. Add it in your shell startup file or rerun with PJ_BIN_DIR set to a suitable user bin directory.\n' "$launcher_dir" >&2
+fi

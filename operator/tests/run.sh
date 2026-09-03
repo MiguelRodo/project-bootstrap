@@ -5,7 +5,7 @@ installer="$operator_dir/install.sh"
 tmp="$(mktemp -d)" || exit 1
 trap 'rm -rf "$tmp"' EXIT
 
-mkdir -p "$tmp/home/planning" "$tmp/bin" || exit 1
+mkdir -p "$tmp/home/planning" "$tmp/home/.local/bin" "$tmp/bin" || exit 1
 
 cat > "$tmp/bin/codex" <<'EOF'
 #!/usr/bin/env bash
@@ -37,13 +37,15 @@ EOF
 chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" || exit 1
 
 test_config_home="$tmp/home/.config"
-HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+test_bin_dir="$tmp/home/.local/bin"
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 
-[ -x "$tmp/home/bin/pj" ] || exit 1
-[ -L "$tmp/home/bin/pja" ] || exit 1
-[ -L "$tmp/home/bin/pjcp" ] || exit 1
-[ -L "$tmp/home/bin/pjcd" ] || exit 1
-[ ! -e "$tmp/home/bin/pjc" ] || exit 1
+[ -x "$test_bin_dir/pj" ] || exit 1
+[ -L "$test_bin_dir/pja" ] || exit 1
+[ -L "$test_bin_dir/pjcp" ] || exit 1
+[ -L "$test_bin_dir/pjcd" ] || exit 1
+[ ! -e "$test_bin_dir/pjc" ] || exit 1
+[ "$(cat "$test_config_home/pj/install-bin-dir")" = "$test_bin_dir" ] || exit 1
 [ "$(cat "$test_config_home/pj/default-backend")" = "codex" ] || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.gemini/GEMINI.md" || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md" || exit 1
@@ -51,7 +53,7 @@ grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md"
 run_named() {
   name="$1"
   shift
-  HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/home/bin:$tmp/bin:$PATH" "$tmp/home/bin/$name" "$@"
+  HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" "$test_bin_dir/$name" "$@"
 }
 
 assert_contains() {
@@ -256,16 +258,61 @@ assert_contains "$codex_env" 'codex'
 overridden_alias="$(run_named pja --backend copilot 'Override the shorthand')" || exit 1
 assert_contains "$overridden_alias" 'copilot'
 
-# Reinstalling preserves both backend and model choices.
-HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+# Reinstalling preserves backend/model choices and the chosen install directory.
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ "$(cat "$test_config_home/pj/install-bin-dir")" = "$test_bin_dir" ] || exit 1
 [ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
 [ "$(cat "$test_config_home/pj/models/copilot")" = "custom-copilot-model" ] || exit 1
 [ "$(cat "$test_config_home/pj/models/codex")" = "custom-codex-model" ] || exit 1
 [ ! -e "$test_config_home/pj/models/antigravity" ] || exit 1
 
 # Remove the legacy pjc symlink only when it is the old installer-managed link.
-ln -sfn "$tmp/home/bin/pj" "$tmp/home/bin/pjc" || exit 1
-HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
-[ ! -e "$tmp/home/bin/pjc" ] || exit 1
+ln -sfn "$test_bin_dir/pj" "$test_bin_dir/pjc" || exit 1
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ ! -e "$test_bin_dir/pjc" ] || exit 1
+
+# If ~/.local/bin is not on PATH but ~/bin is, select ~/bin.
+home_bin_home="$tmp/home-bin"
+mkdir -p "$home_bin_home/planning" "$home_bin_home/bin" || exit 1
+HOME="$home_bin_home" XDG_CONFIG_HOME="$home_bin_home/.config" PATH="$home_bin_home/bin:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ -x "$home_bin_home/bin/pj" ] || exit 1
+[ "$(cat "$home_bin_home/.config/pj/install-bin-dir")" = "$home_bin_home/bin" ] || exit 1
+
+# If neither standard user bin directory is on PATH or exists, fall back to
+# ~/.local/bin and let the installer warn that the chosen directory needs PATH.
+fallback_home="$tmp/fallback-home"
+mkdir -p "$fallback_home/planning" || exit 1
+HOME="$fallback_home" XDG_CONFIG_HOME="$fallback_home/.config" PATH="$tmp/bin:/usr/bin:/bin" bash "$installer" >/dev/null 2>&1 || exit 1
+[ -x "$fallback_home/.local/bin/pj" ] || exit 1
+[ "$(cat "$fallback_home/.config/pj/install-bin-dir")" = "$fallback_home/.local/bin" ] || exit 1
+
+# PJ_BIN_DIR is the explicit escape hatch and accepts a ~/ prefix.
+override_home="$tmp/override-home"
+mkdir -p "$override_home/planning" || exit 1
+HOME="$override_home" XDG_CONFIG_HOME="$override_home/.config" PJ_BIN_DIR='~/tools/bin' PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ -x "$override_home/tools/bin/pj" ] || exit 1
+[ "$(cat "$override_home/.config/pj/install-bin-dir")" = "$override_home/tools/bin" ] || exit 1
+
+# Migrate the historical ~/bin installer layout when the exact managed symlink
+# pattern proves the old files belong to pj. This prevents an old ~/bin/pj from
+# shadowing the newly selected ~/.local/bin installation.
+migration_home="$tmp/migration-home"
+migration_old_bin="$migration_home/bin"
+migration_new_bin="$migration_home/.local/bin"
+mkdir -p "$migration_home/planning" "$migration_old_bin" "$migration_new_bin" || exit 1
+cp "$operator_dir/pj" "$migration_old_bin/pj" || exit 1
+chmod +x "$migration_old_bin/pj" || exit 1
+ln -s "$migration_old_bin/pj" "$migration_old_bin/pja" || exit 1
+ln -s "$migration_old_bin/pj" "$migration_old_bin/pjcp" || exit 1
+ln -s "$migration_old_bin/pj" "$migration_old_bin/pjcd" || exit 1
+ln -s "$migration_old_bin/pj" "$migration_old_bin/pjc" || exit 1
+HOME="$migration_home" XDG_CONFIG_HOME="$migration_home/.config" PATH="$migration_new_bin:$migration_old_bin:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ -x "$migration_new_bin/pj" ] || exit 1
+[ ! -e "$migration_old_bin/pj" ] || exit 1
+[ ! -e "$migration_old_bin/pja" ] || exit 1
+[ ! -e "$migration_old_bin/pjcp" ] || exit 1
+[ ! -e "$migration_old_bin/pjcd" ] || exit 1
+[ ! -e "$migration_old_bin/pjc" ] || exit 1
+[ "$(cat "$migration_home/.config/pj/install-bin-dir")" = "$migration_new_bin" ] || exit 1
 
 printf 'operator pj tests passed\n'
