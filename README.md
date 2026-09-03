@@ -97,10 +97,18 @@ pja --effort medium -- "Review issue #12 - do not edit it"
 ```
 
 For one-shot Antigravity requests the launcher uses headless `agy -p`, high
-reasoning effort by default, the terminal sandbox and automatic tool approval.
-The latter is deliberately broad because headless mode cannot stop for tool
-approval, so use this operator launcher only for requests you intend the agent
-to execute.
+reasoning effort and automatic tool approval. It deliberately does **not** force
+Antigravity's terminal sandbox because the operator needs live network access
+for `gh` and GitHub APIs, while sandboxed commands have no network access by
+default. Pass `--sandbox` explicitly before the prompt if you deliberately want
+that restriction and have configured the required network permissions.
+
+Headless Antigravity runs use a 15-minute response timeout by default rather
+than Antigravity's five-minute default because Project-administration requests
+can involve several repository and GitHub reads. Set `PJ_ANTIGRAVITY_TIMEOUT`
+for a different persistent per-shell value, or pass `--print-timeout` before the
+prompt for one run. Automatic tool approval remains deliberately broad, so use
+this operator launcher only for requests you intend the agent to execute.
 
 GitHub Copilot CLI is available through `pjcp` after `copilot` is installed and
 authenticated:
