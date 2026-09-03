@@ -21,20 +21,20 @@ pj --implement-chat
 
 They ask the selected backend to process trusted `pj:implement-chat` handoff issues using `github-project-admin` and the managed repositories discovered from local `.projects` contracts.
 
-Pass one optional repository selector to restrict queue discovery:
+Pass one optional repository selector with `-r` or `--repo` to restrict queue discovery:
 
 ```bash
-pj -i projects
-pj -i issues
-pj -i MiguelRodo/projects
+pj -i -r projects
+pj -i --repo issues
+pj -i --repo MiguelRodo/projects
 ```
 
-A bare name such as `issues` matches every managed issue repository with that repository name regardless of owner. Therefore it can intentionally match both `MiguelRodo/issues` and `SATVILab/issues`. An `owner/repo` selector matches that exact managed repository. Matching never broadens beyond repositories already declared by the local managed-project contracts.
+A bare selector value such as `issues` matches every managed issue repository with that repository name regardless of owner. Therefore it can intentionally match both `MiguelRodo/issues` and `SATVILab/issues`. An `owner/repo` selector matches that exact managed repository. Matching never broadens beyond repositories already declared by the local managed-project contracts.
 
 Use `-o` before queue mode when a terminal run should exit after the queue-processing turn:
 
 ```bash
-pj -o -i projects
+pj -o -i -r projects
 ```
 
-The launcher does not implement GitHub queue discovery itself. It passes the optional selector to the agent, while the canonical matching, trust, mutation and readback rules remain in `github-project-admin`.
+The launcher does not implement GitHub queue discovery itself. It validates and passes the optional selector to the agent, while the canonical matching, trust, mutation and readback rules remain in `github-project-admin`.
