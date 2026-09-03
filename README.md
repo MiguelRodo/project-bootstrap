@@ -123,6 +123,39 @@ pjcp --model gpt-5.6-terra -- "Review issue #12"
 pjcd -m gpt-5.6-sol -- "Review issue #12"
 ```
 
+### Implement queued Chat handoffs
+
+ChatGPT or another provider can leave a small `pj:implement-chat` issue when it
+has authority for a GitHub change but cannot perform the final Project-side
+mutation itself. Process those local handoffs with any of these equivalent
+forms:
+
+```bash
+pj -i
+pj --implement-issues
+pj --implement-chat
+```
+
+The launcher itself does not contain the queue protocol. It converts the flag
+into a short request for the configured backend, which then follows the
+`github-project-admin` local implementation-queue guidance and each repository's
+`AGENTS.md` and `.projects` contract.
+
+Trusted queue items created by the currently authenticated GitHub user and
+backed by the required unedited authority comment are handled without a routine
+preview. Requests from another author, edited or missing authority comments,
+and suspicious or genuinely ambiguous requests are reviewed first and require
+local operator approval before execution. Project credentials remain local to
+the operator rather than being stored in collaborator-controlled Actions
+workflows.
+
+Use a backend override normally when desired, for example:
+
+```bash
+pj --backend copilot -i
+pjcp -i
+```
+
 The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
 `~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
 and can be changed with `PJ_WORKSPACE`.
