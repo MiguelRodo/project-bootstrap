@@ -31,9 +31,13 @@ GitHub issues or Projects, first retrieve and follow the target repository's
 AGENTS.md. Follow the skill and configuration files it references. If the
 repository or AGENTS.md is unavailable, say so rather than guessing.
 
-Treat my prompt as the desired outcome. If this chat cannot make a required
-GitHub change, return the smallest executable gh command block, including an
-independent check of the result.
+Treat my prompt as the desired outcome. If this chat cannot make an authorised
+GitHub issue or Project mutation, follow the resolved repository contract and
+the github-project-admin handoff. When its local Chat implementation queue is
+enabled, create the small labelled handoff issue and separate unedited authority
+comment it requires so I can later run `pj -i`; report that mutation as queued,
+not completed. Only fall back to the smallest executable gh command plus an
+independent result check when the queue is disabled or cannot be created safely.
 ```
 
 Do not put these instructions into the Drive README. Do not add a ChatGPT
