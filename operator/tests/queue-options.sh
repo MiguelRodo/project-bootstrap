@@ -66,28 +66,32 @@ assert_contains "$oneshot" '<-p>'
 assert_not_contains "$oneshot" '<-i>'
 assert_contains "$oneshot" '<Exit after this turn>'
 
-# Queue mode accepts one optional bare repository selector.
-bare_repo="$(PJ_BACKEND=codex run_pj -i issues)" || exit 1
+# Queue mode accepts a bare repository name through -r/--repo.
+bare_repo="$(PJ_BACKEND=codex run_pj -i -r issues)" || exit 1
 assert_contains "$bare_repo" '<exec>'
 assert_contains "$bare_repo" "Restrict queue discovery to the repository selector 'issues'"
 assert_contains "$bare_repo" 'local-implementation-queue.md'
 
 # owner/repo is accepted as the exact managed repository selector form.
-full_repo="$(PJ_BACKEND=codex run_pj --implement-chat MiguelRodo/projects)" || exit 1
+full_repo="$(PJ_BACKEND=codex run_pj --implement-chat --repo MiguelRodo/projects)" || exit 1
 assert_contains "$full_repo" "Restrict queue discovery to the repository selector 'MiguelRodo/projects'"
+
+# --repo=REPOSITORY is equivalent.
+equals_repo="$(PJ_BACKEND=codex run_pj --implement-chat --repo=projects)" || exit 1
+assert_contains "$equals_repo" "Restrict queue discovery to the repository selector 'projects'"
 
 # No selector preserves the cross-repository queue request.
 all_repos="$(PJ_BACKEND=codex run_pj --implement-issues)" || exit 1
 assert_contains "$all_repos" 'Process the Chat implementation queue across the managed repositories in this workspace.'
 assert_not_contains "$all_repos" 'Restrict queue discovery to the repository selector'
 
-# Queue mode remains intentionally narrow: one validated repository selector.
-if PJ_BACKEND=codex run_pj -i issues extra >/dev/null 2>&1; then
-  echo 'pj -i unexpectedly accepted more than one repository selector' >&2
+# Queue mode remains intentionally narrow: selectors must use the explicit repo option.
+if PJ_BACKEND=codex run_pj -i issues >/dev/null 2>&1; then
+  echo 'pj -i unexpectedly accepted a positional repository selector' >&2
   exit 1
 fi
 
-if PJ_BACKEND=codex run_pj -i '../issues' >/dev/null 2>&1; then
+if PJ_BACKEND=codex run_pj -i -r '../issues' >/dev/null 2>&1; then
   echo 'pj -i unexpectedly accepted an invalid repository selector' >&2
   exit 1
 fi
