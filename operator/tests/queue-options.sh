@@ -32,7 +32,7 @@ run_pj() {
     PJ_WORKSPACE="$tmp/home/planning" \
     XDG_CONFIG_HOME="$tmp/home/.config" \
     PATH="$tmp/bin:$PATH" \
-    "$pj" "$@"
+    bash "$pj" "$@"
 }
 
 assert_contains() {
