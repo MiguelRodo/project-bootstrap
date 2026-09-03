@@ -20,7 +20,7 @@ expand_home_path() {
       printf '%s\n' "$HOME"
       ;;
     "~/"*)
-      printf '%s/%s\n' "$HOME" "${1#~/}"
+      printf '%s/%s\n' "$HOME" "${1:2}"
       ;;
     *)
       printf '%s\n' "$1"
