@@ -78,17 +78,21 @@ assert_not_contains() {
   esac
 }
 
+# Tests run without a TTY, so auto session mode should use one-shot interfaces.
 codex_text="$(run_named pj 'Create the issue - but keep this dash as text')" || exit 1
 assert_contains "$codex_text" 'codex'
 assert_contains "$codex_text" '<-m>'
 assert_contains "$codex_text" '<gpt-5.6-luna>'
 assert_contains "$codex_text" '<model_reasoning_effort="xhigh">'
+assert_contains "$codex_text" '<exec>'
 assert_contains "$codex_text" '<Create the issue - but keep this dash as text>'
 
 codex_words="$(run_named pj Create the issue - with a dash)" || exit 1
+assert_contains "$codex_words" '<exec>'
 assert_contains "$codex_words" '<Create the issue - with a dash>'
 
 codex_options="$(run_named pj --model test-model -- 'Prompt - with dash')" || exit 1
+assert_contains "$codex_options" '<exec>'
 assert_contains "$codex_options" '<--model>'
 assert_contains "$codex_options" '<test-model>'
 assert_contains "$codex_options" '<Prompt - with dash>'
@@ -102,6 +106,7 @@ assert_not_contains "$agy_alias" '<--sandbox>'
 assert_not_contains "$agy_alias" '<--model>'
 assert_contains "$agy_alias" '<-p>'
 assert_contains "$agy_alias" '<Create the issue - with a dash>'
+assert_not_contains "$agy_alias" '<--continue>'
 
 agy_explicit_sandbox="$(run_named pja --sandbox -- 'Prompt - with dash')" || exit 1
 assert_contains "$agy_explicit_sandbox" '<--sandbox>'
@@ -119,11 +124,37 @@ assert_contains "$copilot_alias" '<--allow-all>'
 assert_contains "$copilot_alias" '<--model>'
 assert_contains "$copilot_alias" '<mai-code-1.1-flash>'
 assert_contains "$copilot_alias" '<-p>'
+assert_not_contains "$copilot_alias" '<-i>'
 assert_contains "$copilot_alias" '<Create the issue - with a dash>'
+
+# Forced interactive mode mirrors terminal behaviour: Copilot seeds an
+# interactive session and Antigravity seeds one headless turn then resumes it.
+copilot_interactive="$(PJ_SESSION_MODE=interactive run_named pjcp 'Keep this conversation open')" || exit 1
+assert_contains "$copilot_interactive" '<-i>'
+assert_not_contains "$copilot_interactive" '<-p>'
+assert_contains "$copilot_interactive" '<Keep this conversation open>'
+
+agy_interactive="$(PJ_SESSION_MODE=interactive run_named pja 'Keep this conversation open')" || exit 1
+assert_contains "$agy_interactive" '<-p>'
+assert_contains "$agy_interactive" '<Keep this conversation open>'
+assert_contains "$agy_interactive" '<--continue>'
+
+# The pj-level one-shot override wins even when the environment requests an
+# interactive session.
+copilot_forced_oneshot="$(PJ_SESSION_MODE=interactive run_named pjcp --oneshot -- 'Exit after this turn')" || exit 1
+assert_contains "$copilot_forced_oneshot" '<-p>'
+assert_not_contains "$copilot_forced_oneshot" '<-i>'
+assert_contains "$copilot_forced_oneshot" '<Exit after this turn>'
+
+agy_forced_oneshot="$(PJ_SESSION_MODE=interactive run_named pja --oneshot -- 'Exit after this turn')" || exit 1
+assert_contains "$agy_forced_oneshot" '<-p>'
+assert_not_contains "$agy_forced_oneshot" '<--continue>'
+assert_contains "$agy_forced_oneshot" '<Exit after this turn>'
 
 codex_alias="$(run_named pjcd Create the issue - with a dash)" || exit 1
 assert_contains "$codex_alias" 'codex'
 assert_contains "$codex_alias" '<gpt-5.6-luna>'
+assert_contains "$codex_alias" '<exec>'
 assert_contains "$codex_alias" '<Create the issue - with a dash>'
 
 shown_models="$(run_named pj --show-models)" || exit 1
