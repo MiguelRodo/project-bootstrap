@@ -18,3 +18,5 @@ jobs:
         run: bash skills/project-bootstrap/tests/run.sh
       - name: Run operator launcher offline tests
         run: bash operator/tests/run.sh
+      - name: Run pj queue option tests
+        run: bash operator/tests/queue-options.sh
