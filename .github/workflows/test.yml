@@ -14,5 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run offline tests
+      - name: Run project bootstrap offline tests
         run: bash skills/project-bootstrap/tests/run.sh
+      - name: Run operator launcher offline tests
+        run: bash operator/tests/run.sh
