@@ -176,9 +176,18 @@ run_codex() {
 run_antigravity() {
   defaults=(
     --effort high
-    --sandbox
     --dangerously-skip-permissions
   )
+  print_timeout="${PJ_ANTIGRAVITY_TIMEOUT:-15m}"
+  headless_defaults=(
+    "${defaults[@]}"
+    --print-timeout "$print_timeout"
+  )
+
+  # The GitHub operator needs live network access for `gh` and provider APIs.
+  # Do not force Antigravity's terminal sandbox here because sandboxed commands
+  # have no network access by default. A caller can still request `--sandbox`
+  # explicitly before the prompt when they deliberately want that restriction.
 
   # No arguments: ordinary interactive Antigravity session.
   if [ "$#" -eq 0 ]; then
@@ -194,7 +203,7 @@ run_antigravity() {
     fi
 
     prompt="$*"
-    exec agy "${defaults[@]}" -p "$prompt"
+    exec agy "${headless_defaults[@]}" -p "$prompt"
   fi
 
   # If the first argument begins with a dash, pass Antigravity options until
@@ -211,7 +220,7 @@ run_antigravity() {
         fi
 
         prompt="$*"
-        exec agy "${defaults[@]}" "${agy_args[@]}" -p "$prompt"
+        exec agy "${headless_defaults[@]}" "${agy_args[@]}" -p "$prompt"
       fi
 
       agy_args+=("$1")
@@ -224,7 +233,7 @@ run_antigravity() {
   # Antigravity uses -p for a one-shot prompt. Everything supplied here is
   # prompt text, including later dash-prefixed fragments.
   prompt="$*"
-  exec agy "${defaults[@]}" -p "$prompt"
+  exec agy "${headless_defaults[@]}" -p "$prompt"
 }
 
 run_copilot() {
