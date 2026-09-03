@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+
+workspace="${PJ_WORKSPACE:-$HOME/planning}"
+cd "$workspace" || exit 1
+
+backend="${PJ_BACKEND:-codex}"
+if [ "${1:-}" = "--backend" ]; then
+  if [ "$#" -lt 2 ]; then
+    echo "pj: --backend requires a value" >&2
+    exit 2
+  fi
+  backend="$2"
+  shift 2
+elif [[ "${1:-}" == --backend=* ]]; then
+  backend="${1#--backend=}"
+  shift
+fi
+
+run_codex() {
+  defaults=(
+    --approve-for-me
+    -m "${PJ_CODEX_MODEL:-gpt-5.6-luna}"
+    -c 'model_reasoning_effort="xhigh"'
+    -c 'sandbox_workspace_write.network_access=true'
+  )
+
+  # No arguments: ordinary interactive Codex session.
+  if [ "$#" -eq 0 ]; then
+    exec codex "${defaults[@]}"
+  fi
+
+  # A leading literal `--` means everything after this is prompt text.
+  if [ "$1" = "--" ]; then
+    shift
+
+    if [ "$#" -eq 0 ]; then
+      exec codex "${defaults[@]}"
+    fi
+
+    prompt="$*"
+    exec codex "${defaults[@]}" "$prompt"
+  fi
+
+  # If the first argument begins with a dash, this is a Codex-options
+  # invocation. A later literal `--` starts prompt text.
+  if [[ "$1" == -* ]]; then
+    codex_args=()
+
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--" ]; then
+        shift
+
+        if [ "$#" -eq 0 ]; then
+          exec codex "${defaults[@]}" "${codex_args[@]}"
+        fi
+
+        prompt="$*"
+        exec codex "${defaults[@]}" "${codex_args[@]}" "$prompt"
+      fi
+
+      codex_args+=("$1")
+      shift
+    done
+
+    exec codex "${defaults[@]}" "${codex_args[@]}"
+  fi
+
+  # Otherwise everything supplied is prompt text, including later dashes.
+  prompt="$*"
+  exec codex "${defaults[@]}" "$prompt"
+}
+
+run_antigravity() {
+  defaults=(
+    --effort high
+    --sandbox
+    --dangerously-skip-permissions
+  )
+
+  # No arguments: ordinary interactive Antigravity session.
+  if [ "$#" -eq 0 ]; then
+    exec agy "${defaults[@]}"
+  fi
+
+  # A leading literal `--` means everything after this is prompt text.
+  if [ "$1" = "--" ]; then
+    shift
+
+    if [ "$#" -eq 0 ]; then
+      exec agy "${defaults[@]}"
+    fi
+
+    prompt="$*"
+    exec agy "${defaults[@]}" -p "$prompt"
+  fi
+
+  # If the first argument begins with a dash, pass Antigravity options until
+  # a literal `--`, then combine the remainder into one headless prompt.
+  if [[ "$1" == -* ]]; then
+    agy_args=()
+
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--" ]; then
+        shift
+
+        if [ "$#" -eq 0 ]; then
+          exec agy "${defaults[@]}" "${agy_args[@]}"
+        fi
+
+        prompt="$*"
+        exec agy "${defaults[@]}" "${agy_args[@]}" -p "$prompt"
+      fi
+
+      agy_args+=("$1")
+      shift
+    done
+
+    exec agy "${defaults[@]}" "${agy_args[@]}"
+  fi
+
+  # Antigravity uses -p for a one-shot prompt. Everything supplied here is
+  # prompt text, including later dash-prefixed fragments.
+  prompt="$*"
+  exec agy "${defaults[@]}" -p "$prompt"
+}
+
+case "$backend" in
+  codex)
+    run_codex "$@"
+    ;;
+  antigravity|agy)
+    run_antigravity "$@"
+    ;;
+  *)
+    echo "pj: unsupported backend: $backend" >&2
+    echo "pj: supported backends: codex, antigravity" >&2
+    exit 2
+    ;;
+esac
