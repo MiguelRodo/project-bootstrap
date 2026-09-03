@@ -48,11 +48,28 @@ installer once per machine from a checkout of this repository:
 bash operator/install.sh
 ```
 
-It installs three launcher names into `~/bin`:
+It installs four launcher names into `~/bin`:
 
-- `pj` uses Codex by default;
-- `pja` selects Google Antigravity;
-- `pjc` selects GitHub Copilot CLI.
+- `pj` uses the configured default backend;
+- `pja` always selects Google Antigravity;
+- `pjcp` always selects GitHub Copilot CLI;
+- `pjcd` always selects Codex.
+
+A new install starts with Codex as the `pj` default. Change or inspect that saved
+default with:
+
+```bash
+pj --set-default antigravity
+pj --set-default copilot
+pj --set-default codex
+pj --show-default
+```
+
+The saved choice lives at `${XDG_CONFIG_HOME:-~/.config}/pj/default-backend` and
+is preserved when the installer is rerun. `PJ_DEFAULT_BACKEND` can override the
+saved default for the current environment, while `PJ_BACKEND` remains the
+one-run generic `pj` override. An explicit `--backend` flag has the highest
+precedence and can also override a shorthand launcher.
 
 The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
 `~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
@@ -64,7 +81,8 @@ later dash-prefixed fragments stay part of the request. A leading literal `--`
 forces all following arguments to be prompt text. If the first argument is an
 agent option, a later `--` separates agent options from one combined prompt.
 
-Codex remains the default backend:
+For example, whatever backend `pj` currently defaults to receives this whole
+request as prompt text:
 
 ```bash
 pj "Create the issue - keep this dash as ordinary prompt text"
@@ -84,12 +102,12 @@ The latter is deliberately broad because headless mode cannot stop for tool
 approval, so use this operator launcher only for requests you intend the agent
 to execute.
 
-GitHub Copilot CLI is available through `pjc` after `copilot` is installed and
+GitHub Copilot CLI is available through `pjcp` after `copilot` is installed and
 authenticated:
 
 ```bash
-pjc "Create the issue - keep this dash as text"
-pjc --model auto -- "Review issue #12 - do not edit it"
+pjcp "Create the issue - keep this dash as text"
+pjcp --model auto -- "Review issue #12 - do not edit it"
 ```
 
 For one-shot Copilot requests the launcher uses the official programmatic
@@ -97,11 +115,19 @@ For one-shot Copilot requests the launcher uses the official programmatic
 `--allow-all`, matching the unattended operator model used by the other
 backends. Set `PJ_COPILOT_MODEL` if a persistent model override is wanted.
 
+Codex remains directly available through `pjcd` regardless of the saved `pj`
+default:
+
+```bash
+pjcd "Review the current project"
+```
+
 The long forms remain available when useful:
 
 ```bash
-PJ_BACKEND=antigravity pj "Review the current project"
-pj --backend copilot "Review the current project"
+PJ_DEFAULT_BACKEND=antigravity pj "Review the current project"
+PJ_BACKEND=copilot pj "Review the current project"
+pj --backend codex "Review the current project"
 ```
 
 Repository `AGENTS.md` and `.projects` contracts remain the source of
@@ -135,7 +161,7 @@ live in [`skills/project-bootstrap/SKILL.md`](skills/project-bootstrap/SKILL.md)
 | --- | --- |
 | `PROJECT_BOOTSTRAP.md` | Human-readable workflow and postconditions. |
 | `skills/project-bootstrap/` | Installable Agent Skill. |
-| `operator/` | One-time local `pj`/`pja`/`pjc` operator launcher and installer. |
+| `operator/` | One-time local `pj`/`pja`/`pjcp`/`pjcd` operator launcher and installer. |
 | `templates/drive-readme.md` | Minimal native Google Doc README shape. |
 | `templates/repository-resources.md` | Bounded repository README section. |
 

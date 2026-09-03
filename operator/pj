@@ -3,20 +3,104 @@
 workspace="${PJ_WORKSPACE:-$HOME/planning}"
 cd "$workspace" || exit 1
 
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_dir="$config_home/pj"
+default_backend_file="$config_dir/default-backend"
+
+canonical_backend() {
+  case "$1" in
+    codex)
+      printf 'codex\n'
+      ;;
+    antigravity|agy)
+      printf 'antigravity\n'
+      ;;
+    copilot|github-copilot)
+      printf 'copilot\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+configured_default_backend() {
+  if [ -n "${PJ_DEFAULT_BACKEND:-}" ]; then
+    canonical_backend "$PJ_DEFAULT_BACKEND" || return 1
+    return
+  fi
+
+  if [ -f "$default_backend_file" ]; then
+    configured="$(tr -d '[:space:]' < "$default_backend_file")"
+    if [ -n "$configured" ]; then
+      canonical_backend "$configured" || return 1
+      return
+    fi
+  fi
+
+  printf 'codex\n'
+}
+
+set_default_backend() {
+  if [ "$#" -ne 1 ]; then
+    echo "pj: --set-default requires exactly one backend" >&2
+    exit 2
+  fi
+
+  backend_value="$(canonical_backend "$1")" || {
+    echo "pj: unsupported backend: $1" >&2
+    echo "pj: supported backends: codex, antigravity, copilot" >&2
+    exit 2
+  }
+
+  mkdir -p "$config_dir" || exit 1
+  printf '%s\n' "$backend_value" > "$default_backend_file" || exit 1
+  printf '%s\n' "$backend_value"
+  exit 0
+}
+
+if [ "${1:-}" = "--set-default" ]; then
+  shift
+  set_default_backend "$@"
+fi
+
+if [ "${1:-}" = "--show-default" ]; then
+  if [ "$#" -ne 1 ]; then
+    echo "pj: --show-default does not take arguments" >&2
+    exit 2
+  fi
+  configured_default_backend || {
+    echo "pj: configured default backend is invalid" >&2
+    exit 2
+  }
+  exit 0
+fi
+
 launcher_name="$(basename "$0")"
 case "$launcher_name" in
   pja)
     backend="antigravity"
     ;;
-  pjc)
+  pjcp)
     backend="copilot"
     ;;
+  pjcd)
+    backend="codex"
+    ;;
   *)
-    backend="${PJ_BACKEND:-codex}"
+    if [ -n "${PJ_BACKEND:-}" ]; then
+      backend="$PJ_BACKEND"
+    else
+      backend="$(configured_default_backend)" || {
+        echo "pj: configured default backend is invalid" >&2
+        exit 2
+      }
+    fi
     ;;
 esac
 
-# An explicit backend flag always wins over the launcher-name shorthand.
+# An explicit backend flag always wins over the launcher-name shorthand or
+# configured default.
 if [ "${1:-}" = "--backend" ]; then
   if [ "$#" -lt 2 ]; then
     echo "pj: --backend requires a value" >&2
@@ -28,6 +112,12 @@ elif [[ "${1:-}" == --backend=* ]]; then
   backend="${1#--backend=}"
   shift
 fi
+
+backend="$(canonical_backend "$backend")" || {
+  echo "pj: unsupported backend: $backend" >&2
+  echo "pj: supported backends: codex, antigravity, copilot" >&2
+  exit 2
+}
 
 run_codex() {
   defaults=(
@@ -197,15 +287,10 @@ case "$backend" in
   codex)
     run_codex "$@"
     ;;
-  antigravity|agy)
+  antigravity)
     run_antigravity "$@"
     ;;
-  copilot|github-copilot)
+  copilot)
     run_copilot "$@"
-    ;;
-  *)
-    echo "pj: unsupported backend: $backend" >&2
-    echo "pj: supported backends: codex, antigravity, copilot" >&2
-    exit 2
     ;;
 esac

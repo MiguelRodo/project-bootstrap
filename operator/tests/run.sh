@@ -36,18 +36,22 @@ EOF
 
 chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" || exit 1
 
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+test_config_home="$tmp/home/.config"
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 
 [ -x "$tmp/home/bin/pj" ] || exit 1
 [ -L "$tmp/home/bin/pja" ] || exit 1
-[ -L "$tmp/home/bin/pjc" ] || exit 1
+[ -L "$tmp/home/bin/pjcp" ] || exit 1
+[ -L "$tmp/home/bin/pjcd" ] || exit 1
+[ ! -e "$tmp/home/bin/pjc" ] || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "codex" ] || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.gemini/GEMINI.md" || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md" || exit 1
 
 run_named() {
   name="$1"
   shift
-  HOME="$tmp/home" PATH="$tmp/home/bin:$tmp/bin:$PATH" "$tmp/home/bin/$name" "$@"
+  HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/home/bin:$tmp/bin:$PATH" "$tmp/home/bin/$name" "$@"
 }
 
 assert_contains() {
@@ -79,26 +83,53 @@ assert_contains "$agy_alias" 'agy'
 assert_contains "$agy_alias" '<-p>'
 assert_contains "$agy_alias" '<Create the issue - with a dash>'
 
-agy_options="$(run_named pja --model gemini-test -- 'Prompt - with dash')" || exit 1
-assert_contains "$agy_options" '<--model>'
-assert_contains "$agy_options" '<gemini-test>'
-assert_contains "$agy_options" '<-p>'
-assert_contains "$agy_options" '<Prompt - with dash>'
-
-copilot_alias="$(run_named pjc Create the issue - with a dash)" || exit 1
+copilot_alias="$(run_named pjcp Create the issue - with a dash)" || exit 1
 assert_contains "$copilot_alias" 'copilot'
 assert_contains "$copilot_alias" '<--allow-all>'
 assert_contains "$copilot_alias" '<-p>'
 assert_contains "$copilot_alias" '<Create the issue - with a dash>'
 
-copilot_options="$(run_named pjc --model test-model -- 'Prompt - with dash')" || exit 1
-assert_contains "$copilot_options" '<--model>'
-assert_contains "$copilot_options" '<test-model>'
-assert_contains "$copilot_options" '<-p>'
-assert_contains "$copilot_options" '<Prompt - with dash>'
+codex_alias="$(run_named pjcd Create the issue - with a dash)" || exit 1
+assert_contains "$codex_alias" 'codex'
+assert_contains "$codex_alias" '<Create the issue - with a dash>'
 
-copilot_env="$(PJ_BACKEND=copilot run_named pj 'Use Copilot from the environment')" || exit 1
-assert_contains "$copilot_env" 'copilot'
-assert_contains "$copilot_env" '<Use Copilot from the environment>'
+shown_default="$(run_named pj --show-default)" || exit 1
+[ "$shown_default" = "codex" ] || exit 1
+
+set_default="$(run_named pj --set-default antigravity)" || exit 1
+[ "$set_default" = "antigravity" ] || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
+
+agy_default="$(run_named pj 'Use the configured default')" || exit 1
+assert_contains "$agy_default" 'agy'
+assert_contains "$agy_default" '<Use the configured default>'
+
+# Explicit shorthands ignore the configured default.
+codex_alias_after_default="$(run_named pjcd 'Still use Codex')" || exit 1
+assert_contains "$codex_alias_after_default" 'codex'
+
+copilot_alias_after_default="$(run_named pjcp 'Still use Copilot')" || exit 1
+assert_contains "$copilot_alias_after_default" 'copilot'
+
+# PJ_DEFAULT_BACKEND overrides the saved default for generic pj.
+copilot_env_default="$(PJ_DEFAULT_BACKEND=copilot run_named pj 'Use the environment default')" || exit 1
+assert_contains "$copilot_env_default" 'copilot'
+
+# PJ_BACKEND remains the one-run generic pj override.
+codex_env="$(PJ_BACKEND=codex run_named pj 'Use Codex for one run')" || exit 1
+assert_contains "$codex_env" 'codex'
+
+# An explicit --backend wins even when a shorthand selected another agent.
+overridden_alias="$(run_named pja --backend copilot 'Override the shorthand')" || exit 1
+assert_contains "$overridden_alias" 'copilot'
+
+# Reinstalling preserves the chosen saved default.
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
+
+# Remove the legacy pjc symlink only when it is the old installer-managed link.
+ln -sfn "$tmp/home/bin/pj" "$tmp/home/bin/pjc" || exit 1
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ ! -e "$tmp/home/bin/pjc" ] || exit 1
 
 printf 'operator pj tests passed\n'

@@ -5,12 +5,30 @@ launcher_source="$script_dir/pj"
 launcher_dir="$HOME/bin"
 launcher_target="$launcher_dir/pj"
 antigravity_target="$launcher_dir/pja"
-copilot_target="$launcher_dir/pjc"
+copilot_target="$launcher_dir/pjcp"
+codex_target="$launcher_dir/pjcd"
+legacy_copilot_target="$launcher_dir/pjc"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+config_dir="$config_home/pj"
+default_backend_file="$config_dir/default-backend"
 
-mkdir -p "$launcher_dir" || exit 1
+mkdir -p "$launcher_dir" "$config_dir" || exit 1
 install -m 0755 "$launcher_source" "$launcher_target" || exit 1
 ln -sfn "$launcher_target" "$antigravity_target" || exit 1
 ln -sfn "$launcher_target" "$copilot_target" || exit 1
+ln -sfn "$launcher_target" "$codex_target" || exit 1
+
+# Remove the previously managed `pjc` Copilot shorthand only when it is still
+# the symlink created by this installer. Never remove an unrelated user file.
+if [ -L "$legacy_copilot_target" ] && [ "$(readlink "$legacy_copilot_target")" = "$launcher_target" ]; then
+  rm -f "$legacy_copilot_target" || exit 1
+fi
+
+# Preserve an existing configured default across reinstalls. New installs start
+# with Codex until the operator selects another backend.
+if [ ! -f "$default_backend_file" ]; then
+  printf 'codex\n' > "$default_backend_file" || exit 1
+fi
 
 start_marker='<!-- pj-managed-projects:start -->'
 end_marker='<!-- pj-managed-projects:end -->'
@@ -66,7 +84,7 @@ cat >> "$tmp_context" <<'EOF'
 <!-- pj-managed-projects:start -->
 ## GitHub Project administration from `pj`
 
-When `pjc` or `pj --backend copilot` launches GitHub Copilot CLI from the shared
+When `pjcp` or `pj --backend copilot` launches GitHub Copilot CLI from the shared
 planning workspace for a GitHub issue or Project-administration request, first
 resolve the target repository and read and follow that repository's `AGENTS.md`.
 Let its instructions route you to the repository's `.projects` contract and
@@ -79,7 +97,9 @@ mv "$tmp_context" "$copilot_context" || exit 1
 
 printf 'Installed pj at %s\n' "$launcher_target"
 printf 'Installed pja -> pj at %s\n' "$antigravity_target"
-printf 'Installed pjc -> pj at %s\n' "$copilot_target"
+printf 'Installed pjcp -> pj at %s\n' "$copilot_target"
+printf 'Installed pjcd -> pj at %s\n' "$codex_target"
+printf 'Configured pj default backend in %s\n' "$default_backend_file"
 printf 'Updated Antigravity global context at %s\n' "$gemini_context"
 printf 'Updated Copilot global context at %s\n' "$copilot_context"
 
@@ -92,7 +112,7 @@ if ! command -v agy >/dev/null 2>&1; then
 fi
 
 if ! command -v copilot >/dev/null 2>&1; then
-  printf 'Note: copilot is not currently on PATH. Install and authenticate GitHub Copilot CLI before using pjc.\n' >&2
+  printf 'Note: copilot is not currently on PATH. Install and authenticate GitHub Copilot CLI before using pjcp.\n' >&2
 fi
 
 case ":$PATH:" in
