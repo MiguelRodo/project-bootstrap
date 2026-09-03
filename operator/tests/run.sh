@@ -80,6 +80,9 @@ assert_not_contains() {
 
 codex_text="$(run_named pj 'Create the issue - but keep this dash as text')" || exit 1
 assert_contains "$codex_text" 'codex'
+assert_contains "$codex_text" '<-m>'
+assert_contains "$codex_text" '<gpt-5.6-luna>'
+assert_contains "$codex_text" '<model_reasoning_effort="xhigh">'
 assert_contains "$codex_text" '<Create the issue - but keep this dash as text>'
 
 codex_words="$(run_named pj Create the issue - with a dash)" || exit 1
@@ -96,6 +99,7 @@ assert_contains "$agy_alias" '<--dangerously-skip-permissions>'
 assert_contains "$agy_alias" '<--print-timeout>'
 assert_contains "$agy_alias" '<15m>'
 assert_not_contains "$agy_alias" '<--sandbox>'
+assert_not_contains "$agy_alias" '<--model>'
 assert_contains "$agy_alias" '<-p>'
 assert_contains "$agy_alias" '<Create the issue - with a dash>'
 
@@ -112,12 +116,56 @@ assert_contains "$agy_custom_timeout" '<Use a longer timeout>'
 copilot_alias="$(run_named pjcp Create the issue - with a dash)" || exit 1
 assert_contains "$copilot_alias" 'copilot'
 assert_contains "$copilot_alias" '<--allow-all>'
+assert_contains "$copilot_alias" '<--model>'
+assert_contains "$copilot_alias" '<mai-code-1.1-flash>'
 assert_contains "$copilot_alias" '<-p>'
 assert_contains "$copilot_alias" '<Create the issue - with a dash>'
 
 codex_alias="$(run_named pjcd Create the issue - with a dash)" || exit 1
 assert_contains "$codex_alias" 'codex'
+assert_contains "$codex_alias" '<gpt-5.6-luna>'
 assert_contains "$codex_alias" '<Create the issue - with a dash>'
+
+shown_models="$(run_named pj --show-models)" || exit 1
+assert_contains "$shown_models" $'codex\tgpt-5.6-luna'
+assert_contains "$shown_models" $'antigravity\tprovider-default'
+assert_contains "$shown_models" $'copilot\tmai-code-1.1-flash'
+
+shown_copilot_model="$(run_named pj --show-model copilot)" || exit 1
+[ "$shown_copilot_model" = "mai-code-1.1-flash" ] || exit 1
+
+set_copilot_model="$(run_named pj --set-model copilot custom-copilot-model)" || exit 1
+[ "$set_copilot_model" = $'copilot\tcustom-copilot-model' ] || exit 1
+[ "$(cat "$test_config_home/pj/models/copilot")" = "custom-copilot-model" ] || exit 1
+copilot_custom="$(run_named pjcp 'Use configured Copilot model')" || exit 1
+assert_contains "$copilot_custom" '<custom-copilot-model>'
+
+set_antigravity_model="$(run_named pj --set-model antigravity gemini-3.8-flash-high)" || exit 1
+[ "$set_antigravity_model" = $'antigravity\tgemini-3.8-flash-high' ] || exit 1
+agy_custom_model="$(run_named pja 'Use configured Antigravity model')" || exit 1
+assert_contains "$agy_custom_model" '<--model>'
+assert_contains "$agy_custom_model" '<gemini-3.8-flash-high>'
+
+set_codex_model="$(run_named pj --set-model codex custom-codex-model)" || exit 1
+[ "$set_codex_model" = $'codex\tcustom-codex-model' ] || exit 1
+codex_custom_model="$(run_named pjcd 'Use configured Codex model')" || exit 1
+assert_contains "$codex_custom_model" '<custom-codex-model>'
+assert_contains "$codex_custom_model" '<model_reasoning_effort="xhigh">'
+
+copilot_env_model="$(PJ_COPILOT_MODEL=env-copilot-model run_named pjcp 'Use environment Copilot model')" || exit 1
+assert_contains "$copilot_env_model" '<env-copilot-model>'
+
+agy_env_model="$(PJ_ANTIGRAVITY_MODEL=env-agy-model run_named pja 'Use environment Antigravity model')" || exit 1
+assert_contains "$agy_env_model" '<env-agy-model>'
+
+codex_env_model="$(PJ_CODEX_MODEL=env-codex-model run_named pjcd 'Use environment Codex model')" || exit 1
+assert_contains "$codex_env_model" '<env-codex-model>'
+
+reset_agy_model="$(run_named pj --reset-model antigravity)" || exit 1
+[ "$reset_agy_model" = $'antigravity\tprovider-default' ] || exit 1
+[ ! -e "$test_config_home/pj/models/antigravity" ] || exit 1
+agy_after_reset="$(run_named pja 'Use provider default again')" || exit 1
+assert_not_contains "$agy_after_reset" '<--model>'
 
 shown_default="$(run_named pj --show-default)" || exit 1
 [ "$shown_default" = "codex" ] || exit 1
@@ -130,7 +178,7 @@ agy_default="$(run_named pj 'Use the configured default')" || exit 1
 assert_contains "$agy_default" 'agy'
 assert_contains "$agy_default" '<Use the configured default>'
 
-# Explicit shorthands ignore the configured default.
+# Explicit shorthands ignore the configured backend default.
 codex_alias_after_default="$(run_named pjcd 'Still use Codex')" || exit 1
 assert_contains "$codex_alias_after_default" 'codex'
 
@@ -149,9 +197,12 @@ assert_contains "$codex_env" 'codex'
 overridden_alias="$(run_named pja --backend copilot 'Override the shorthand')" || exit 1
 assert_contains "$overridden_alias" 'copilot'
 
-# Reinstalling preserves the chosen saved default.
+# Reinstalling preserves both backend and model choices.
 HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 [ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
+[ "$(cat "$test_config_home/pj/models/copilot")" = "custom-copilot-model" ] || exit 1
+[ "$(cat "$test_config_home/pj/models/codex")" = "custom-codex-model" ] || exit 1
+[ ! -e "$test_config_home/pj/models/antigravity" ] || exit 1
 
 # Remove the legacy pjc symlink only when it is the old installer-managed link.
 ln -sfn "$tmp/home/bin/pj" "$tmp/home/bin/pjc" || exit 1
