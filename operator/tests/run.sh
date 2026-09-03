@@ -66,6 +66,18 @@ assert_contains() {
   esac
 }
 
+assert_not_contains() {
+  output="$1"
+  unexpected="$2"
+  case "$output" in
+    *"$unexpected"*)
+      printf 'Expected output not to contain: %s\nActual output:\n%s\n' "$unexpected" "$output" >&2
+      exit 1
+      ;;
+    *) ;;
+  esac
+}
+
 codex_text="$(run_named pj 'Create the issue - but keep this dash as text')" || exit 1
 assert_contains "$codex_text" 'codex'
 assert_contains "$codex_text" '<Create the issue - but keep this dash as text>'
@@ -80,8 +92,22 @@ assert_contains "$codex_options" '<Prompt - with dash>'
 
 agy_alias="$(run_named pja Create the issue - with a dash)" || exit 1
 assert_contains "$agy_alias" 'agy'
+assert_contains "$agy_alias" '<--dangerously-skip-permissions>'
+assert_contains "$agy_alias" '<--print-timeout>'
+assert_contains "$agy_alias" '<15m>'
+assert_not_contains "$agy_alias" '<--sandbox>'
 assert_contains "$agy_alias" '<-p>'
 assert_contains "$agy_alias" '<Create the issue - with a dash>'
+
+agy_explicit_sandbox="$(run_named pja --sandbox -- 'Prompt - with dash')" || exit 1
+assert_contains "$agy_explicit_sandbox" '<--sandbox>'
+assert_contains "$agy_explicit_sandbox" '<--print-timeout>'
+assert_contains "$agy_explicit_sandbox" '<Prompt - with dash>'
+
+agy_custom_timeout="$(PJ_ANTIGRAVITY_TIMEOUT=30m run_named pja 'Use a longer timeout')" || exit 1
+assert_contains "$agy_custom_timeout" '<--print-timeout>'
+assert_contains "$agy_custom_timeout" '<30m>'
+assert_contains "$agy_custom_timeout" '<Use a longer timeout>'
 
 copilot_alias="$(run_named pjcp Create the issue - with a dash)" || exit 1
 assert_contains "$copilot_alias" 'copilot'
