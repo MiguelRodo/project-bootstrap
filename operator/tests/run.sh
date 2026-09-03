@@ -36,21 +36,22 @@ EOF
 
 chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" || exit 1
 
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+test_config_home="$tmp/home/.config"
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 
 [ -x "$tmp/home/bin/pj" ] || exit 1
 [ -L "$tmp/home/bin/pja" ] || exit 1
 [ -L "$tmp/home/bin/pjcp" ] || exit 1
 [ -L "$tmp/home/bin/pjcd" ] || exit 1
 [ ! -e "$tmp/home/bin/pjc" ] || exit 1
-[ "$(cat "$tmp/home/.config/pj/default-backend")" = "codex" ] || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "codex" ] || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.gemini/GEMINI.md" || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md" || exit 1
 
 run_named() {
   name="$1"
   shift
-  HOME="$tmp/home" PATH="$tmp/home/bin:$tmp/bin:$PATH" "$tmp/home/bin/$name" "$@"
+  HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/home/bin:$tmp/bin:$PATH" "$tmp/home/bin/$name" "$@"
 }
 
 assert_contains() {
@@ -97,7 +98,7 @@ shown_default="$(run_named pj --show-default)" || exit 1
 
 set_default="$(run_named pj --set-default antigravity)" || exit 1
 [ "$set_default" = "antigravity" ] || exit 1
-[ "$(cat "$tmp/home/.config/pj/default-backend")" = "antigravity" ] || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
 
 agy_default="$(run_named pj 'Use the configured default')" || exit 1
 assert_contains "$agy_default" 'agy'
@@ -123,12 +124,12 @@ overridden_alias="$(run_named pja --backend copilot 'Override the shorthand')" |
 assert_contains "$overridden_alias" 'copilot'
 
 # Reinstalling preserves the chosen saved default.
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
-[ "$(cat "$tmp/home/.config/pj/default-backend")" = "antigravity" ] || exit 1
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+[ "$(cat "$test_config_home/pj/default-backend")" = "antigravity" ] || exit 1
 
 # Remove the legacy pjc symlink only when it is the old installer-managed link.
 ln -sfn "$tmp/home/bin/pj" "$tmp/home/bin/pjc" || exit 1
-HOME="$tmp/home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 [ ! -e "$tmp/home/bin/pjc" ] || exit 1
 
 printf 'operator pj tests passed\n'
