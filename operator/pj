@@ -321,7 +321,14 @@ should_interact() {
 }
 
 valid_repo_selector() {
-  [[ "$1" =~ ^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?$ ]]
+  selector="$1"
+  [[ "$selector" =~ ^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)?$ ]] || return 1
+  case "$selector" in
+    .|..|./*|../*|*/.|*/..)
+      return 1
+      ;;
+  esac
+  return 0
 }
 
 # Queue mode is deliberately thin. The launcher only turns a shorthand and an
