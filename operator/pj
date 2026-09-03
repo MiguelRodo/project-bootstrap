@@ -7,6 +7,7 @@ config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 config_dir="$config_home/pj"
 default_backend_file="$config_dir/default-backend"
 model_dir="$config_dir/models"
+session_mode="${PJ_SESSION_MODE:-auto}"
 
 canonical_backend() {
   case "$1" in
@@ -287,6 +288,69 @@ backend="$(canonical_backend "$backend")" || {
   exit 2
 }
 
+# Prompt-launched sessions stay conversational in a terminal by default.
+# `--oneshot` is a pj-level escape hatch for scripting and must occur before
+# agent-specific options or prompt text.
+if [ "${1:-}" = "--oneshot" ] || [ "${1:-}" = "--one-shot" ]; then
+  session_mode="oneshot"
+  shift
+fi
+
+case "$session_mode" in
+  auto|interactive|oneshot)
+    ;;
+  *)
+    echo "pj: invalid PJ_SESSION_MODE: $session_mode" >&2
+    echo "pj: supported session modes: auto, interactive, oneshot" >&2
+    exit 2
+    ;;
+esac
+
+should_interact() {
+  case "$session_mode" in
+    interactive)
+      return 0
+      ;;
+    oneshot)
+      return 1
+      ;;
+    auto)
+      [ -t 0 ] && [ -t 1 ]
+      ;;
+  esac
+}
+
+# Parse the request once so every backend has identical dash-safe semantics.
+agent_args=()
+prompt=""
+has_prompt=0
+
+if [ "$#" -gt 0 ]; then
+  if [ "$1" = "--" ]; then
+    shift
+    if [ "$#" -gt 0 ]; then
+      prompt="$*"
+      has_prompt=1
+    fi
+  elif [[ "$1" == -* ]]; then
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--" ]; then
+        shift
+        if [ "$#" -gt 0 ]; then
+          prompt="$*"
+          has_prompt=1
+        fi
+        break
+      fi
+      agent_args+=("$1")
+      shift
+    done
+  else
+    prompt="$*"
+    has_prompt=1
+  fi
+fi
+
 run_codex() {
   codex_model="$(configured_model codex)" || exit 1
   defaults=(
@@ -296,50 +360,17 @@ run_codex() {
     -c 'sandbox_workspace_write.network_access=true'
   )
 
-  # No arguments: ordinary interactive Codex session.
-  if [ "$#" -eq 0 ]; then
-    exec codex "${defaults[@]}"
+  if [ "$has_prompt" -eq 0 ]; then
+    exec codex "${defaults[@]}" "${agent_args[@]}"
   fi
 
-  # A leading literal `--` means everything after this is prompt text.
-  if [ "$1" = "--" ]; then
-    shift
-
-    if [ "$#" -eq 0 ]; then
-      exec codex "${defaults[@]}"
-    fi
-
-    prompt="$*"
-    exec codex "${defaults[@]}" "$prompt"
+  if should_interact; then
+    # A positional prompt seeds the ordinary Codex TUI and leaves it open.
+    exec codex "${defaults[@]}" "${agent_args[@]}" "$prompt"
   fi
 
-  # If the first argument begins with a dash, this is a Codex-options
-  # invocation. A later literal `--` starts prompt text.
-  if [[ "$1" == -* ]]; then
-    codex_args=()
-
-    while [ "$#" -gt 0 ]; do
-      if [ "$1" = "--" ]; then
-        shift
-
-        if [ "$#" -eq 0 ]; then
-          exec codex "${defaults[@]}" "${codex_args[@]}"
-        fi
-
-        prompt="$*"
-        exec codex "${defaults[@]}" "${codex_args[@]}" "$prompt"
-      fi
-
-      codex_args+=("$1")
-      shift
-    done
-
-    exec codex "${defaults[@]}" "${codex_args[@]}"
-  fi
-
-  # Otherwise everything supplied is prompt text, including later dashes.
-  prompt="$*"
-  exec codex "${defaults[@]}" "$prompt"
+  # Non-TTY and explicit --oneshot requests use Codex's non-interactive exec.
+  exec codex "${defaults[@]}" exec "${agent_args[@]}" "$prompt"
 }
 
 run_antigravity() {
@@ -358,56 +389,25 @@ run_antigravity() {
     --print-timeout "$print_timeout"
   )
 
-  # The GitHub operator needs live network access for `gh` and provider APIs.
-  # Do not force Antigravity's terminal sandbox here because sandboxed commands
-  # have no network access by default. A caller can still request `--sandbox`
-  # explicitly before the prompt when they deliberately want that restriction.
-
-  # No arguments: ordinary interactive Antigravity session.
-  if [ "$#" -eq 0 ]; then
-    exec agy "${defaults[@]}"
+  if [ "$has_prompt" -eq 0 ]; then
+    exec agy "${defaults[@]}" "${agent_args[@]}"
   fi
 
-  # A leading literal `--` means everything after this is prompt text.
-  if [ "$1" = "--" ]; then
-    shift
-
-    if [ "$#" -eq 0 ]; then
-      exec agy "${defaults[@]}"
-    fi
-
-    prompt="$*"
-    exec agy "${headless_defaults[@]}" -p "$prompt"
+  if ! should_interact; then
+    exec agy "${headless_defaults[@]}" "${agent_args[@]}" -p "$prompt"
   fi
 
-  # If the first argument begins with a dash, pass Antigravity options until
-  # a literal `--`, then combine the remainder into one headless prompt.
-  if [[ "$1" == -* ]]; then
-    agy_args=()
-
-    while [ "$#" -gt 0 ]; do
-      if [ "$1" = "--" ]; then
-        shift
-
-        if [ "$#" -eq 0 ]; then
-          exec agy "${defaults[@]}" "${agy_args[@]}"
-        fi
-
-        prompt="$*"
-        exec agy "${headless_defaults[@]}" "${agy_args[@]}" -p "$prompt"
-      fi
-
-      agy_args+=("$1")
-      shift
-    done
-
-    exec agy "${defaults[@]}" "${agy_args[@]}"
+  # Antigravity has no documented interactive initial-prompt flag. Seed the
+  # conversation with one headless turn, then immediately resume that newly
+  # created workspace conversation in the TUI so follow-ups retain context.
+  agy "${headless_defaults[@]}" "${agent_args[@]}" -p "$prompt"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    exit "$status"
   fi
 
-  # Antigravity uses -p for a one-shot prompt. Everything supplied here is
-  # prompt text, including later dash-prefixed fragments.
-  prompt="$*"
-  exec agy "${headless_defaults[@]}" -p "$prompt"
+  printf '\npj: continuing the same Antigravity conversation interactively; type follow-up prompts directly in the TUI.\n' >&2
+  exec agy "${defaults[@]}" --continue
 }
 
 run_copilot() {
@@ -420,61 +420,27 @@ run_copilot() {
     defaults+=(--model "$copilot_model")
   fi
 
-  # No arguments: ordinary interactive GitHub Copilot CLI session.
-  if [ "$#" -eq 0 ]; then
-    exec copilot "${defaults[@]}"
+  if [ "$has_prompt" -eq 0 ]; then
+    exec copilot "${defaults[@]}" "${agent_args[@]}"
   fi
 
-  # A leading literal `--` means everything after this is prompt text.
-  if [ "$1" = "--" ]; then
-    shift
-
-    if [ "$#" -eq 0 ]; then
-      exec copilot "${defaults[@]}"
-    fi
-
-    prompt="$*"
-    exec copilot "${defaults[@]}" -p "$prompt"
+  if should_interact; then
+    # Copilot's -i/--interactive flag executes the initial prompt and keeps the
+    # interactive session open for subsequent turns.
+    exec copilot "${defaults[@]}" "${agent_args[@]}" -i "$prompt"
   fi
 
-  # If the first argument begins with a dash, pass Copilot options until a
-  # literal `--`, then combine the remainder into one programmatic prompt.
-  if [[ "$1" == -* ]]; then
-    copilot_args=()
-
-    while [ "$#" -gt 0 ]; do
-      if [ "$1" = "--" ]; then
-        shift
-
-        if [ "$#" -eq 0 ]; then
-          exec copilot "${defaults[@]}" "${copilot_args[@]}"
-        fi
-
-        prompt="$*"
-        exec copilot "${defaults[@]}" "${copilot_args[@]}" -p "$prompt"
-      fi
-
-      copilot_args+=("$1")
-      shift
-    done
-
-    exec copilot "${defaults[@]}" "${copilot_args[@]}"
-  fi
-
-  # Copilot CLI uses -p for a one-shot prompt. Everything supplied here is
-  # prompt text, including later dash-prefixed fragments.
-  prompt="$*"
-  exec copilot "${defaults[@]}" -p "$prompt"
+  exec copilot "${defaults[@]}" "${agent_args[@]}" -p "$prompt"
 }
 
 case "$backend" in
   codex)
-    run_codex "$@"
+    run_codex
     ;;
   antigravity)
-    run_antigravity "$@"
+    run_antigravity
     ;;
   copilot)
-    run_copilot "$@"
+    run_copilot
     ;;
 esac
