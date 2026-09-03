@@ -71,6 +71,58 @@ saved default for the current environment, while `PJ_BACKEND` remains the
 one-run generic `pj` override. An explicit `--backend` flag has the highest
 precedence and can also override a shorthand launcher.
 
+### Per-backend model defaults
+
+`pj` also keeps model selection separate for each backend. The built-in model
+defaults are:
+
+- Codex: `gpt-5.6-luna`, with the existing `xhigh` reasoning effort;
+- GitHub Copilot CLI: `mai-code-1.1-flash` (MAI-Code-1.1-Flash);
+- Google Antigravity: no `pj` model pin, so Antigravity follows its own current
+  or configured default model instead of freezing the launcher to one Flash
+  release.
+
+Inspect all effective model defaults or one backend with:
+
+```bash
+pj --show-models
+pj --show-model copilot
+```
+
+Save a different default for a backend with:
+
+```bash
+pj --set-model copilot gpt-5.6-terra
+pj --set-model codex gpt-5.6-luna
+pj --set-model antigravity gemini-3.8-flash-high
+```
+
+Saved model choices live under `${XDG_CONFIG_HOME:-~/.config}/pj/models/` and
+are preserved across installer reruns. Reset one backend to the built-in `pj`
+default with:
+
+```bash
+pj --reset-model copilot
+pj --reset-model codex
+pj --reset-model antigravity
+```
+
+Resetting Antigravity removes the launcher-level model pin and returns it to the
+provider's own current/default model. This is intentional: when the desired
+behaviour is simply "use the current Flash default", leaving Antigravity
+unpinned allows provider updates to advance that choice without editing `pj`.
+
+The per-backend environment variables `PJ_CODEX_MODEL`,
+`PJ_ANTIGRAVITY_MODEL`, and `PJ_COPILOT_MODEL` override saved model choices for
+the current environment. Backend-native model flags also remain available for
+one run by placing options before a literal `--`, for example:
+
+```bash
+pja --model gemini-3.8-flash-medium -- "Review issue #12"
+pjcp --model gpt-5.6-terra -- "Review issue #12"
+pjcd -m gpt-5.6-sol -- "Review issue #12"
+```
+
 The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
 `~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
 and can be changed with `PJ_WORKSPACE`.
@@ -97,18 +149,14 @@ pja --effort medium -- "Review issue #12 - do not edit it"
 ```
 
 For one-shot Antigravity requests the launcher uses headless `agy -p`, high
-reasoning effort and automatic tool approval. It deliberately does **not** force
-Antigravity's terminal sandbox because the operator needs live network access
-for `gh` and GitHub APIs, while sandboxed commands have no network access by
-default. Pass `--sandbox` explicitly before the prompt if you deliberately want
-that restriction and have configured the required network permissions.
-
-Headless Antigravity runs use a 15-minute response timeout by default rather
-than Antigravity's five-minute default because Project-administration requests
-can involve several repository and GitHub reads. Set `PJ_ANTIGRAVITY_TIMEOUT`
-for a different persistent per-shell value, or pass `--print-timeout` before the
-prompt for one run. Automatic tool approval remains deliberately broad, so use
-this operator launcher only for requests you intend the agent to execute.
+reasoning effort by default and automatic tool approval. Ordinary `pja` runs do
+not force the terminal sandbox because Project administration needs live `gh`
+and provider API access; request `--sandbox` explicitly when that restriction is
+wanted. Headless runs use a 15-minute response timeout by default, configurable
+with `PJ_ANTIGRAVITY_TIMEOUT` or a one-run `--print-timeout` option. Automatic
+tool approval is deliberately broad because headless mode cannot stop for tool
+approval, so use this operator launcher only for requests you intend the agent
+to execute.
 
 GitHub Copilot CLI is available through `pjcp` after `copilot` is installed and
 authenticated:
@@ -121,7 +169,7 @@ pjcp --model auto -- "Review issue #12 - do not edit it"
 For one-shot Copilot requests the launcher uses the official programmatic
 `copilot -p` interface and grants all tool, path and URL permissions with
 `--allow-all`, matching the unattended operator model used by the other
-backends. Set `PJ_COPILOT_MODEL` if a persistent model override is wanted.
+backends.
 
 Codex remains directly available through `pjcd` regardless of the saved `pj`
 default:

@@ -6,6 +6,7 @@ cd "$workspace" || exit 1
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 config_dir="$config_home/pj"
 default_backend_file="$config_dir/default-backend"
+model_dir="$config_dir/models"
 
 canonical_backend() {
   case "$1" in
@@ -59,6 +60,153 @@ set_default_backend() {
   exit 0
 }
 
+builtin_model() {
+  case "$1" in
+    codex)
+      printf 'gpt-5.6-luna\n'
+      ;;
+    copilot)
+      printf 'mai-code-1.1-flash\n'
+      ;;
+    antigravity)
+      # Stay unpinned so Antigravity can follow its own current/default model.
+      printf '\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+environment_model() {
+  case "$1" in
+    codex)
+      printf '%s\n' "${PJ_CODEX_MODEL:-}"
+      ;;
+    antigravity)
+      printf '%s\n' "${PJ_ANTIGRAVITY_MODEL:-}"
+      ;;
+    copilot)
+      printf '%s\n' "${PJ_COPILOT_MODEL:-}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+model_file_for_backend() {
+  printf '%s/%s\n' "$model_dir" "$1"
+}
+
+configured_model() {
+  backend_value="$(canonical_backend "$1")" || return 1
+
+  environment_value="$(environment_model "$backend_value")" || return 1
+  if [ -n "$environment_value" ]; then
+    printf '%s\n' "$environment_value"
+    return
+  fi
+
+  model_file="$(model_file_for_backend "$backend_value")"
+  if [ -f "$model_file" ]; then
+    saved_value="$(cat "$model_file")"
+    if [ -n "$saved_value" ]; then
+      printf '%s\n' "$saved_value"
+      return
+    fi
+  fi
+
+  builtin_model "$backend_value"
+}
+
+print_model_value() {
+  if [ -n "$1" ]; then
+    printf '%s\n' "$1"
+  else
+    printf 'provider-default\n'
+  fi
+}
+
+set_backend_model() {
+  if [ "$#" -ne 2 ]; then
+    echo "pj: --set-model requires BACKEND MODEL" >&2
+    exit 2
+  fi
+
+  backend_value="$(canonical_backend "$1")" || {
+    echo "pj: unsupported backend: $1" >&2
+    echo "pj: supported backends: codex, antigravity, copilot" >&2
+    exit 2
+  }
+
+  model_value="$2"
+  if [ -z "$model_value" ]; then
+    echo "pj: model must not be empty" >&2
+    exit 2
+  fi
+
+  mkdir -p "$model_dir" || exit 1
+  model_file="$(model_file_for_backend "$backend_value")"
+  printf '%s\n' "$model_value" > "$model_file" || exit 1
+  printf '%s\t%s\n' "$backend_value" "$model_value"
+  exit 0
+}
+
+show_backend_model() {
+  if [ "$#" -ne 1 ]; then
+    echo "pj: --show-model requires exactly one backend" >&2
+    exit 2
+  fi
+
+  backend_value="$(canonical_backend "$1")" || {
+    echo "pj: unsupported backend: $1" >&2
+    echo "pj: supported backends: codex, antigravity, copilot" >&2
+    exit 2
+  }
+
+  model_value="$(configured_model "$backend_value")" || exit 1
+  print_model_value "$model_value"
+  exit 0
+}
+
+show_backend_models() {
+  if [ "$#" -ne 0 ]; then
+    echo "pj: --show-models does not take arguments" >&2
+    exit 2
+  fi
+
+  for backend_value in codex antigravity copilot; do
+    model_value="$(configured_model "$backend_value")" || exit 1
+    if [ -n "$model_value" ]; then
+      printf '%s\t%s\n' "$backend_value" "$model_value"
+    else
+      printf '%s\tprovider-default\n' "$backend_value"
+    fi
+  done
+  exit 0
+}
+
+reset_backend_model() {
+  if [ "$#" -ne 1 ]; then
+    echo "pj: --reset-model requires exactly one backend" >&2
+    exit 2
+  fi
+
+  backend_value="$(canonical_backend "$1")" || {
+    echo "pj: unsupported backend: $1" >&2
+    echo "pj: supported backends: codex, antigravity, copilot" >&2
+    exit 2
+  }
+
+  model_file="$(model_file_for_backend "$backend_value")"
+  rm -f "$model_file" || exit 1
+  model_value="$(configured_model "$backend_value")" || exit 1
+  printf '%s\t' "$backend_value"
+  print_model_value "$model_value"
+  exit 0
+}
+
 if [ "${1:-}" = "--set-default" ]; then
   shift
   set_default_backend "$@"
@@ -74,6 +222,26 @@ if [ "${1:-}" = "--show-default" ]; then
     exit 2
   }
   exit 0
+fi
+
+if [ "${1:-}" = "--set-model" ]; then
+  shift
+  set_backend_model "$@"
+fi
+
+if [ "${1:-}" = "--show-model" ]; then
+  shift
+  show_backend_model "$@"
+fi
+
+if [ "${1:-}" = "--show-models" ]; then
+  shift
+  show_backend_models "$@"
+fi
+
+if [ "${1:-}" = "--reset-model" ] || [ "${1:-}" = "--clear-model" ]; then
+  shift
+  reset_backend_model "$@"
 fi
 
 launcher_name="$(basename "$0")"
@@ -120,9 +288,10 @@ backend="$(canonical_backend "$backend")" || {
 }
 
 run_codex() {
+  codex_model="$(configured_model codex)" || exit 1
   defaults=(
     --approve-for-me
-    -m "${PJ_CODEX_MODEL:-gpt-5.6-luna}"
+    -m "$codex_model"
     -c 'model_reasoning_effort="xhigh"'
     -c 'sandbox_workspace_write.network_access=true'
   )
@@ -174,10 +343,15 @@ run_codex() {
 }
 
 run_antigravity() {
+  antigravity_model="$(configured_model antigravity)" || exit 1
   defaults=(
     --effort high
     --dangerously-skip-permissions
   )
+  if [ -n "$antigravity_model" ]; then
+    defaults+=(--model "$antigravity_model")
+  fi
+
   print_timeout="${PJ_ANTIGRAVITY_TIMEOUT:-15m}"
   headless_defaults=(
     "${defaults[@]}"
@@ -237,12 +411,13 @@ run_antigravity() {
 }
 
 run_copilot() {
+  copilot_model="$(configured_model copilot)" || exit 1
   defaults=(
     --allow-all
   )
 
-  if [ -n "${PJ_COPILOT_MODEL:-}" ]; then
-    defaults+=(--model "$PJ_COPILOT_MODEL")
+  if [ -n "$copilot_model" ]; then
+    defaults+=(--model "$copilot_model")
   fi
 
   # No arguments: ordinary interactive GitHub Copilot CLI session.
