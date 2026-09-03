@@ -48,9 +48,21 @@ installer once per machine from a checkout of this repository:
 bash operator/install.sh
 ```
 
-It installs `~/bin/pj` and adds a bounded Antigravity pointer to
-`~/.gemini/GEMINI.md`. The workspace defaults to `~/planning` and can be changed
-with `PJ_WORKSPACE`.
+It installs three launcher names into `~/bin`:
+
+- `pj` uses Codex by default;
+- `pja` selects Google Antigravity;
+- `pjc` selects GitHub Copilot CLI.
+
+The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
+`~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
+and can be changed with `PJ_WORKSPACE`.
+
+The same prompt-parsing rule applies to every backend. When the first argument
+is ordinary text, all remaining arguments are combined into prompt text, so
+later dash-prefixed fragments stay part of the request. A leading literal `--`
+forces all following arguments to be prompt text. If the first argument is an
+agent option, a later `--` separates agent options from one combined prompt.
 
 Codex remains the default backend:
 
@@ -58,26 +70,43 @@ Codex remains the default backend:
 pj "Create the issue - keep this dash as ordinary prompt text"
 ```
 
-The launcher treats every argument as prompt text when the first argument is
-ordinary text. A leading literal `--` also forces all following arguments to be
-prompt text. If the first argument is an option, a later `--` separates agent
-options from one combined prompt.
-
-Google Antigravity is available through the same launcher after `agy` is
-installed and authenticated:
+Google Antigravity is available through `pja` after `agy` is installed and
+authenticated:
 
 ```bash
-pj --backend antigravity "Create the issue - keep this dash as text"
-PJ_BACKEND=antigravity pj "Review the current project"
-pj --backend antigravity --effort medium -- "Review issue #12 - do not edit it"
+pja "Create the issue - keep this dash as text"
+pja --effort medium -- "Review issue #12 - do not edit it"
 ```
 
 For one-shot Antigravity requests the launcher uses headless `agy -p`, high
 reasoning effort by default, the terminal sandbox and automatic tool approval.
 The latter is deliberately broad because headless mode cannot stop for tool
 approval, so use this operator launcher only for requests you intend the agent
-to execute. Repository `AGENTS.md` and `.projects` contracts remain the source
-of Project-administration behaviour rather than Antigravity-specific rules.
+to execute.
+
+GitHub Copilot CLI is available through `pjc` after `copilot` is installed and
+authenticated:
+
+```bash
+pjc "Create the issue - keep this dash as text"
+pjc --model auto -- "Review issue #12 - do not edit it"
+```
+
+For one-shot Copilot requests the launcher uses the official programmatic
+`copilot -p` interface and grants all tool, path and URL permissions with
+`--allow-all`, matching the unattended operator model used by the other
+backends. Set `PJ_COPILOT_MODEL` if a persistent model override is wanted.
+
+The long forms remain available when useful:
+
+```bash
+PJ_BACKEND=antigravity pj "Review the current project"
+pj --backend copilot "Review the current project"
+```
+
+Repository `AGENTS.md` and `.projects` contracts remain the source of
+Project-administration behaviour for every backend rather than provider-specific
+copies of the task model.
 
 Run the offline launcher checks with:
 
@@ -106,7 +135,7 @@ live in [`skills/project-bootstrap/SKILL.md`](skills/project-bootstrap/SKILL.md)
 | --- | --- |
 | `PROJECT_BOOTSTRAP.md` | Human-readable workflow and postconditions. |
 | `skills/project-bootstrap/` | Installable Agent Skill. |
-| `operator/` | One-time local `pj` operator launcher and installer. |
+| `operator/` | One-time local `pj`/`pja`/`pjc` operator launcher and installer. |
 | `templates/drive-readme.md` | Minimal native Google Doc README shape. |
 | `templates/repository-resources.md` | Bounded repository README section. |
 
