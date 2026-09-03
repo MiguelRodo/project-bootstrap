@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)" || exit 1
-launcher="$root/pj"
+operator_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
+launcher="$operator_dir/pj"
 tmp="$(mktemp -d)" || exit 1
 trap 'rm -rf "$tmp"' EXIT
 
@@ -28,7 +28,7 @@ EOF
 chmod +x "$tmp/bin/codex" "$tmp/bin/agy" || exit 1
 
 run_pj() {
-  HOME="$tmp/home" PATH="$tmp/bin:$PATH" "$launcher" "$@"
+  HOME="$tmp/home" PATH="$tmp/bin:$PATH" bash "$launcher" "$@"
 }
 
 assert_contains() {
