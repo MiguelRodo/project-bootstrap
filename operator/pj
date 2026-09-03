@@ -3,7 +3,20 @@
 workspace="${PJ_WORKSPACE:-$HOME/planning}"
 cd "$workspace" || exit 1
 
-backend="${PJ_BACKEND:-codex}"
+launcher_name="$(basename "$0")"
+case "$launcher_name" in
+  pja)
+    backend="antigravity"
+    ;;
+  pjc)
+    backend="copilot"
+    ;;
+  *)
+    backend="${PJ_BACKEND:-codex}"
+    ;;
+esac
+
+# An explicit backend flag always wins over the launcher-name shorthand.
 if [ "${1:-}" = "--backend" ]; then
   if [ "$#" -lt 2 ]; then
     echo "pj: --backend requires a value" >&2
@@ -124,6 +137,62 @@ run_antigravity() {
   exec agy "${defaults[@]}" -p "$prompt"
 }
 
+run_copilot() {
+  defaults=(
+    --allow-all
+  )
+
+  if [ -n "${PJ_COPILOT_MODEL:-}" ]; then
+    defaults+=(--model "$PJ_COPILOT_MODEL")
+  fi
+
+  # No arguments: ordinary interactive GitHub Copilot CLI session.
+  if [ "$#" -eq 0 ]; then
+    exec copilot "${defaults[@]}"
+  fi
+
+  # A leading literal `--` means everything after this is prompt text.
+  if [ "$1" = "--" ]; then
+    shift
+
+    if [ "$#" -eq 0 ]; then
+      exec copilot "${defaults[@]}"
+    fi
+
+    prompt="$*"
+    exec copilot "${defaults[@]}" -p "$prompt"
+  fi
+
+  # If the first argument begins with a dash, pass Copilot options until a
+  # literal `--`, then combine the remainder into one programmatic prompt.
+  if [[ "$1" == -* ]]; then
+    copilot_args=()
+
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--" ]; then
+        shift
+
+        if [ "$#" -eq 0 ]; then
+          exec copilot "${defaults[@]}" "${copilot_args[@]}"
+        fi
+
+        prompt="$*"
+        exec copilot "${defaults[@]}" "${copilot_args[@]}" -p "$prompt"
+      fi
+
+      copilot_args+=("$1")
+      shift
+    done
+
+    exec copilot "${defaults[@]}" "${copilot_args[@]}"
+  fi
+
+  # Copilot CLI uses -p for a one-shot prompt. Everything supplied here is
+  # prompt text, including later dash-prefixed fragments.
+  prompt="$*"
+  exec copilot "${defaults[@]}" -p "$prompt"
+}
+
 case "$backend" in
   codex)
     run_codex "$@"
@@ -131,9 +200,12 @@ case "$backend" in
   antigravity|agy)
     run_antigravity "$@"
     ;;
+  copilot|github-copilot)
+    run_copilot "$@"
+    ;;
   *)
     echo "pj: unsupported backend: $backend" >&2
-    echo "pj: supported backends: codex, antigravity" >&2
+    echo "pj: supported backends: codex, antigravity, copilot" >&2
     exit 2
     ;;
 esac
