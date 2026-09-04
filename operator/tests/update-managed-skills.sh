@@ -23,6 +23,7 @@ git -C "$seed" add . || exit 1
 git -C "$seed" commit -m 'Initial managed repository' >/dev/null || exit 1
 git -C "$seed" remote add origin "$remote" || exit 1
 git -C "$seed" push -u origin main >/dev/null || exit 1
+git --git-dir="$remote" symbolic-ref HEAD refs/heads/main || exit 1
 
 git clone "$remote" "$workspace/demo" >/dev/null || exit 1
 git -C "$workspace/demo" config user.name 'Test User'
