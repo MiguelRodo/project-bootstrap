@@ -218,9 +218,19 @@ default and chooses interactive mode only when stdin and stdout are attached to
 a terminal. An explicit `--oneshot` overrides `PJ_SESSION_MODE=interactive` for
 that invocation.
 
-The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
-`~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
-and can be changed with `PJ_WORKSPACE`.
+The installer treats `~/AGENTS.md` as the canonical cross-agent user guidance
+and, where the backend files contain only known installer-managed content,
+links `~/.codex/AGENTS.md`, `~/.copilot/copilot-instructions.md` and
+`~/.gemini/GEMINI.md` back to it. Genuine backend-specific content is preserved
+rather than overwritten. The same home guidance defines opt-in `agy` delegation:
+only Codex and Copilot may use `agy`, only after explicit operator authorisation
+for the current task or conversation, with `gemini-3.8-flash-high` as the
+preferred delegated model. The installer also maintains a Codex exec-policy rule
+allowing the `agy` executable. Direct Copilot shell approvals remain scoped per
+repository/directory by Copilot itself, so a direct Copilot session may still
+ask to persist `agy:*` for its current location. See [`operator/README.md`](operator/README.md)
+for the permission details. The workspace defaults to `~/planning` and can be
+changed with `PJ_WORKSPACE`.
 
 The same prompt-parsing rule applies to every backend. When the first argument
 is ordinary text, all remaining arguments are combined into prompt text, so

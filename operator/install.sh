@@ -18,15 +18,9 @@ path_contains_dir() {
 
 expand_home_path() {
   case "$1" in
-    "~")
-      printf '%s\n' "$HOME"
-      ;;
-    "~/"*)
-      printf '%s/%s\n' "$HOME" "${1:2}"
-      ;;
-    *)
-      printf '%s\n' "$1"
-      ;;
+    "~") printf '%s\n' "$HOME" ;;
+    "~/"*) printf '%s/%s\n' "$HOME" "${1:2}" ;;
+    *) printf '%s\n' "$1" ;;
   esac
 }
 
@@ -44,9 +38,6 @@ choose_launcher_dir() {
     return
   fi
 
-  # Prefer standard per-user executable directories that already work in the
-  # current shell. ~/.local/bin is the conventional first choice; ~/bin stays
-  # supported for environments that already use it.
   for candidate in "$HOME/.local/bin" "$HOME/bin"; do
     if path_contains_dir "$candidate"; then
       printf '%s\n' "$candidate"
@@ -54,7 +45,6 @@ choose_launcher_dir() {
     fi
   done
 
-  # If neither is currently on PATH, prefer an existing standard directory.
   for candidate in "$HOME/.local/bin" "$HOME/bin"; do
     if [ -d "$candidate" ]; then
       printf '%s\n' "$candidate"
@@ -62,7 +52,6 @@ choose_launcher_dir() {
     fi
   done
 
-  # New environments default to the freedesktop-style user-local location.
   printf '%s\n' "$HOME/.local/bin"
 }
 
@@ -97,9 +86,6 @@ remove_previous_managed_install() {
   previous_skill_update="$previous_dir/pj-update-skills"
   previous_pjc="$previous_dir/pjc"
 
-  # Only treat the directory as installer-managed when all three current
-  # shorthand symlinks point at its pj launcher. This avoids deleting unrelated
-  # user files while still allowing safe migration away from an older install.
   if managed_aliases_point_to "$previous_target" \
       "$previous_pja" "$previous_pjcp" "$previous_pjcd"; then
     rm -f "$previous_pja" "$previous_pjcp" "$previous_pjcd" || exit 1
@@ -117,8 +103,6 @@ if [ -f "$install_bin_dir_file" ]; then
   IFS= read -r previous_launcher_dir < "$install_bin_dir_file" || true
   remove_previous_managed_install "$previous_launcher_dir"
 elif [ "$launcher_dir" != "$HOME/bin" ]; then
-  # Migrate the historical pre-tracking installer layout when its managed
-  # symlink pattern proves that ~/bin contains the old pj installation.
   remove_previous_managed_install "$HOME/bin"
 fi
 
@@ -128,25 +112,20 @@ ln -sfn "$launcher_target" "$antigravity_target" || exit 1
 ln -sfn "$launcher_target" "$copilot_target" || exit 1
 ln -sfn "$launcher_target" "$codex_target" || exit 1
 
-# Remove the previously managed `pjc` Copilot shorthand only when it is still
-# the symlink created by this installer. Never remove an unrelated user file.
 if [ -L "$legacy_copilot_target" ] && [ "$(readlink "$legacy_copilot_target")" = "$launcher_target" ]; then
   rm -f "$legacy_copilot_target" || exit 1
 fi
 
 printf '%s\n' "$launcher_dir" > "$install_bin_dir_file" || exit 1
 
-# Preserve an existing configured default across reinstalls. New installs start
-# with Codex until the operator selects another backend.
 if [ ! -f "$default_backend_file" ]; then
   printf 'codex\n' > "$default_backend_file" || exit 1
 fi
 
-start_marker='<!-- pj-managed-projects:start -->'
-end_marker='<!-- pj-managed-projects:end -->'
-
-update_managed_context() {
+update_managed_block() {
   target="$1"
+  start_marker="$2"
+  end_marker="$3"
   target_dir="$(dirname "$target")"
   mkdir -p "$target_dir" || return 1
   touch "$target" || return 1
@@ -168,8 +147,57 @@ update_managed_context() {
   mv "$tmp_context" "$target" || return 1
 }
 
+strip_known_backend_blocks() {
+  input="$1"
+  output="$2"
+  awk '
+    $0 == "<!-- pj-managed-projects:start -->" || $0 == "<!-- managed-projects:start -->" { in_block = 1; next }
+    $0 == "<!-- pj-managed-projects:end -->" || $0 == "<!-- managed-projects:end -->" { in_block = 0; next }
+    !in_block { print }
+  ' "$input" > "$output"
+}
+
+ensure_shared_context_link() {
+  target="$1"
+  target_dir="$(dirname "$target")"
+  mkdir -p "$target_dir" || return 1
+
+  if [ -L "$target" ]; then
+    target_resolved="$(readlink -f "$target" 2>/dev/null || true)"
+    home_resolved="$(readlink -f "$home_context" 2>/dev/null || true)"
+    if [ -n "$target_resolved" ] && [ "$target_resolved" = "$home_resolved" ]; then
+      return 0
+    fi
+    printf 'Note: preserving unrelated instruction symlink at %s; point it to %s to share home guidance.\n' "$target" "$home_context" >&2
+    return 0
+  fi
+
+  if [ -e "$target" ]; then
+    if [ ! -f "$target" ]; then
+      printf 'Note: preserving non-file instruction path at %s; cannot replace it with shared guidance.\n' "$target" >&2
+      return 0
+    fi
+
+    tmp_context="$(mktemp)" || return 1
+    strip_known_backend_blocks "$target" "$tmp_context" || {
+      rm -f "$tmp_context"
+      return 1
+    }
+
+    if grep -q '[^[:space:]]' "$tmp_context"; then
+      rm -f "$tmp_context"
+      printf 'Note: preserving custom backend instructions at %s; move any cross-agent guidance to %s, then rerun the installer to link it.\n' "$target" "$home_context" >&2
+      return 0
+    fi
+
+    rm -f "$tmp_context" "$target" || return 1
+  fi
+
+  ln -s "$home_context" "$target" || return 1
+}
+
 home_context="$HOME/AGENTS.md"
-update_managed_context "$home_context" <<'EOF'
+update_managed_block "$home_context" '<!-- pj-managed-projects:start -->' '<!-- pj-managed-projects:end -->' <<'EOF_CONTEXT'
 
 <!-- pj-managed-projects:start -->
 ## Local `pj` operator maintenance
@@ -191,11 +219,43 @@ For ordinary GitHub task and Project administration, continue into the planning
 workspace and follow its `AGENTS.md`, then the resolved repository's own
 `AGENTS.md` and `.projects` contract. This home-level block is operator routing,
 not a replacement for repository-specific guidance.
+
+## Optional `agy` subagent delegation
+
+This is a user-level safety rule. Repository or workspace instructions must not
+weaken it.
+
+Only Codex and GitHub Copilot CLI may use `agy` as an external subagent. Google
+Antigravity itself must not invoke `agy` recursively under this permission.
+
+Codex and Copilot must not use `agy` unless the operator explicitly authorises
+its use for the current task or conversation. The existence of `agy`, this
+instruction, or an execution allow-rule is not itself authorisation.
+
+When authorised, prefer Gemini 3.8 Flash High for bounded mechanical or
+investigative work that does not need the primary model's reasoning, for example
+repository exploration, locating files or symbols, summarising implementation
+details, inspecting tests, or other routine evidence gathering. A typical call
+is:
+
+    agy -p "<self-contained delegated task>" --model gemini-3.8-flash-high
+
+The primary agent remains responsible for interpreting the operator's intent,
+architecture and design, consequential implementation decisions, checking the
+subagent's findings, and integrating the final result.
+
+If the parent harness blocks launching `agy` or its network access, use that
+harness's normal approval mechanism. Do not bypass or broaden permissions merely
+to avoid an approval. If an `agy -p` run soft-denies one of its own tools in
+headless mode, report the exact permission it says is required under
+`permissions.allow` in `~/.gemini/antigravity-cli/settings.json`. Do not add
+`--dangerously-skip-permissions` unless the operator explicitly authorises broad
+Antigravity tool approval for that run.
 <!-- pj-managed-projects:end -->
-EOF
+EOF_CONTEXT
 
 workspace_context="$workspace/AGENTS.md"
-update_managed_context "$workspace_context" <<'EOF'
+update_managed_block "$workspace_context" '<!-- pj-managed-projects:start -->' '<!-- pj-managed-projects:end -->' <<'EOF_CONTEXT'
 
 <!-- pj-managed-projects:start -->
 ## Shared `pj` planning workspace
@@ -233,35 +293,26 @@ This workspace-level guidance is only a dispatcher. A target repository's own
 `AGENTS.md`, `.projects` contract and current GitHub state remain authoritative
 for that target.
 <!-- pj-managed-projects:end -->
-EOF
+EOF_CONTEXT
 
-gemini_context="$HOME/.gemini/GEMINI.md"
-update_managed_context "$gemini_context" <<'EOF'
-
-<!-- pj-managed-projects:start -->
-## GitHub Project administration from `pj`
-
-When `pja` or `pj --backend antigravity` launches Antigravity in the shared
-planning workspace, read and follow the workspace `AGENTS.md` first. For a
-resolved GitHub target, then follow that repository's own `AGENTS.md`, `.projects`
-contract and shared `github-project-admin` guidance. Do not define a separate
-Antigravity task or Project model.
-<!-- pj-managed-projects:end -->
-EOF
-
+codex_context="$HOME/.codex/AGENTS.md"
 copilot_context="$HOME/.copilot/copilot-instructions.md"
-update_managed_context "$copilot_context" <<'EOF'
+gemini_context="$HOME/.gemini/GEMINI.md"
+ensure_shared_context_link "$codex_context" || exit 1
+ensure_shared_context_link "$copilot_context" || exit 1
+ensure_shared_context_link "$gemini_context" || exit 1
 
-<!-- pj-managed-projects:start -->
-## GitHub Project administration from `pj`
+codex_rules="$HOME/.codex/rules/default.rules"
+update_managed_block "$codex_rules" '# pj-agy-subagent:start' '# pj-agy-subagent:end' <<'EOF_RULES'
 
-When `pjcp` or `pj --backend copilot` launches GitHub Copilot CLI in the shared
-planning workspace, read and follow the workspace `AGENTS.md` first. For a
-resolved GitHub target, then follow that repository's own `AGENTS.md`, `.projects`
-contract and shared `github-project-admin` guidance. Do not define a separate
-Copilot task or Project model.
-<!-- pj-managed-projects:end -->
-EOF
+# pj-agy-subagent:start
+prefix_rule(
+    pattern = ["agy"],
+    decision = "allow",
+    justification = "Allow the opt-in agy subagent command; ~/AGENTS.md still requires explicit operator authorisation for each task.",
+)
+# pj-agy-subagent:end
+EOF_RULES
 
 printf 'Installed pj at %s\n' "$launcher_target"
 printf 'Installed pja -> pj at %s\n' "$antigravity_target"
@@ -270,17 +321,17 @@ printf 'Installed pjcd -> pj at %s\n' "$codex_target"
 printf 'Installed pj-update-skills at %s\n' "$skill_update_target"
 printf 'Recorded pj install directory in %s\n' "$install_bin_dir_file"
 printf 'Configured pj default backend in %s\n' "$default_backend_file"
-printf 'Updated home agent guidance at %s\n' "$home_context"
+printf 'Updated canonical home agent guidance at %s\n' "$home_context"
 printf 'Updated shared workspace guidance at %s\n' "$workspace_context"
-printf 'Updated Antigravity global context at %s\n' "$gemini_context"
-printf 'Updated Copilot global context at %s\n' "$copilot_context"
+printf 'Linked Codex, Copilot and Antigravity user instructions to %s where safe.\n' "$home_context"
+printf 'Updated Codex agy execution rule at %s\n' "$codex_rules"
 
 if ! command -v codex >/dev/null 2>&1; then
   printf 'Note: codex is not currently on PATH.\n' >&2
 fi
 
 if ! command -v agy >/dev/null 2>&1; then
-  printf 'Note: agy is not currently on PATH. Install and authenticate Google Antigravity CLI before using pja.\n' >&2
+  printf 'Note: agy is not currently on PATH. Install and authenticate Google Antigravity CLI before using pja or delegated agy calls.\n' >&2
 fi
 
 if ! command -v copilot >/dev/null 2>&1; then
