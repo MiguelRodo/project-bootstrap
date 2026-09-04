@@ -72,6 +72,9 @@ It installs four launcher names into a sensible per-user executable directory:
 - `pjcp` always selects GitHub Copilot CLI;
 - `pjcd` always selects Codex.
 
+It also installs `pj-update-skills`, the maintenance command for refreshing the
+shared `github-project-admin` skill across managed repositories.
+
 The installer prefers `~/.local/bin` when it is already on `PATH`, then `~/bin`
 when that is the configured standard user bin directory. If neither is on
 `PATH`, it prefers an existing `~/.local/bin` or `~/bin`, in that order, and
@@ -235,9 +238,31 @@ default and chooses interactive mode only when stdin and stdout are attached to
 a terminal. An explicit `--oneshot` overrides `PJ_SESSION_MODE=interactive` for
 that invocation.
 
-The installer also adds bounded operator pointers to `~/.gemini/GEMINI.md` and
-`~/.copilot/copilot-instructions.md`. The workspace defaults to `~/planning`
-and can be changed with `PJ_WORKSPACE`.
+The installer treats `~/AGENTS.md` as the canonical cross-agent user guidance
+and exposes its managed block through `~/.codex/AGENTS.md`,
+`~/.copilot/copilot-instructions.md` and `~/.gemini/GEMINI.md`. An absent, empty
+or installer-owned backend file becomes a symlink to the canonical file. A
+regular file with genuine backend-specific content stays regular: its custom
+content, file mode and block position are preserved while the canonical managed
+block is refreshed in place. Unrelated symlinks and non-files are left
+unchanged. A broken backend instruction symlink is reported as an installation
+error rather than silently treated as configured.
+
+The canonical home and workspace files, and the Codex rules file, may themselves
+be symlinks into a dotfiles checkout. The installer updates their resolved file
+targets without replacing the links or changing the target modes.
+
+The same home guidance defines opt-in `agy` delegation: only Codex and Copilot
+may use `agy`, only after explicit operator authorisation for the current task or
+conversation, with `gemini-3.8-flash-high` as the preferred delegated model.
+Conversation-level authorisation covers repeated calls, repository inspection
+uses `--add-dir`, and the primary agent may satisfy a narrowly scoped headless
+permission request on the operator's behalf. Broad wildcard permissions and
+`--dangerously-skip-permissions` remain separately gated. The installer also
+maintains a Codex exec-policy rule allowing the `agy` executable. See
+[`operator/README.md`](operator/README.md) for migration and permission details.
+The workspace defaults to `~/planning` and can be changed with `PJ_WORKSPACE`.
+An absolute path or a quoted `~/...` path is accepted.
 
 The same prompt-parsing rule applies to every backend. When the first argument
 is ordinary text, all remaining arguments are combined into prompt text, so
@@ -331,7 +356,7 @@ live in [`skills/project-bootstrap/SKILL.md`](skills/project-bootstrap/SKILL.md)
 | --- | --- |
 | `PROJECT_BOOTSTRAP.md` | Human-readable workflow and postconditions. |
 | `skills/project-bootstrap/` | Installable Agent Skill. |
-| `operator/` | One-time local `pj`/`pja`/`pjcp`/`pjcd` operator launcher and installer. |
+| `operator/` | One-time local `pj`/`pja`/`pjcp`/`pjcd` launcher, skill updater and installer. |
 | `templates/drive-readme.md` | Minimal native Google Doc README shape. |
 | `templates/repository-resources.md` | Bounded repository README section. |
 
