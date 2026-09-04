@@ -2,6 +2,14 @@
 
 `pj` runs the configured local agent against `${PJ_WORKSPACE:-~/planning}`. The backend shorthands are `pja` for Antigravity, `pjcp` for GitHub Copilot CLI and `pjcd` for Codex.
 
+`pj` is not an alias for the optional `projects` Go CLI. The launcher chooses an
+agent and keeps its conversation open; `projects` handles supported deterministic
+GitHub Project operations. An agent started by `pj` may use that binary when it
+is installed, then follow the repository scripts or direct GitHub path when it
+is not. See the
+[`projects` CLI guide](https://github.com/MiguelRodo/projects/blob/main/docs/cli.md)
+for installation and read-only update checks.
+
 The installer maintains bounded `pj` blocks in `~/AGENTS.md` and `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. The home-level file is the canonical cross-agent user guidance: it tells agents about local operator maintenance, including the shared skill updater, and contains user-level rules that should apply regardless of backend. The workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed blocks is preserved on reinstall.
 
 Where it is safe to do so, the installer links each backend's documented user-level instruction entrypoint back to the same canonical `~/AGENTS.md`:
@@ -12,17 +20,46 @@ Where it is safe to do so, the installer links each backend's documented user-le
 ~/.gemini/GEMINI.md                -> ~/AGENTS.md
 ```
 
-Known older installer-managed blocks are migrated automatically. If one of those backend files contains genuine custom content, the installer preserves it and prints a note instead of overwriting it. Move cross-agent content into `~/AGENTS.md` and rerun the installer once any deliberately backend-specific content has been handled.
+The installer chooses the least surprising migration for each backend entrypoint:
+
+- an absent, empty or installer-owned file becomes a symlink to `~/AGENTS.md`;
+- a regular file with genuine backend-specific content remains a regular file,
+  keeps that content and its mode, and receives one hard-updated copy of the
+  canonical managed block at the existing block position; and
+- an unrelated symlink or non-file path is preserved unchanged and reported.
+
+Known older installer-managed blocks are removed during either migration. A
+reinstall refreshes, rather than duplicates, the managed block. This lets a
+straightforward installation use one physical file while respecting an existing
+backend-specific arrangement.
+
+`~/AGENTS.md`, the workspace `AGENTS.md` and the Codex rules file may themselves
+be symlinks into a dotfiles checkout. The installer writes through those links,
+keeps them in place and preserves each target file's mode. It stops on a broken
+managed-file or backend instruction symlink, because success would otherwise be
+misleading.
 
 ## Optional `agy` delegation
 
-The canonical home guidance advertises `agy` as an opt-in external subagent to Codex and GitHub Copilot CLI only. Antigravity itself must not invoke `agy` recursively under this facility. Codex or Copilot may delegate bounded mechanical or investigative work only after the operator explicitly authorises `agy` for the current task or conversation. The default delegated model is `gemini-3.8-flash-high`; the primary agent remains responsible for design, consequential decisions, verification and integration.
+The canonical home guidance advertises `agy` as an opt-in external subagent to Codex and GitHub Copilot CLI only. Antigravity itself must not invoke `agy` recursively under this facility. Codex or Copilot may delegate bounded mechanical or investigative work only after the operator explicitly authorises `agy` for the current task or conversation. Conversation-level authorisation covers repeated useful calls without repeated prompts. The default delegated model is `gemini-3.8-flash-high`; the primary agent remains responsible for design, consequential decisions, verification and integration.
+
+Delegated repository inspection should pass the repository explicitly, for
+example:
+
+```bash
+agy -p "<self-contained delegated task>" \
+  --model gemini-3.8-flash-high \
+  --add-dir "/absolute/repository/root"
+```
+
+`--add-dir` registers the repository as an Antigravity workspace instead of
+requiring a broad global file-read permission.
 
 The installer also maintains a bounded Codex exec-policy rule in `~/.codex/rules/default.rules` allowing the `agy` executable. The natural-language opt-in rule in `~/AGENTS.md` still controls when Codex may choose to use it.
 
 GitHub Copilot CLI does not currently expose an equivalent documented machine-wide user shell-command allow-list. Direct Copilot sessions may therefore ask for approval the first time they invoke `agy` in a repository or directory; that approval can be persisted for the current location by Copilot. `pjcp` already runs with its own explicit broad tool approval, so no additional launcher permission is needed there.
 
-Antigravity headless runs deliberately keep their own normal permission policy. Workspace file reads and writes are available under Antigravity's normal rules, while shell commands or other gated tools may be soft-denied in headless mode. When that happens, the calling agent should report the exact `permissions.allow` rule requested for `~/.gemini/antigravity-cli/settings.json`. It must not add `--dangerously-skip-permissions` unless the operator explicitly authorises broad Antigravity tool approval for that run.
+Antigravity headless runs deliberately keep their own normal permission policy. Workspace file reads and writes are available under Antigravity's normal rules, while shell commands or other gated tools may be soft-denied in headless mode. Once delegation is authorised, the primary agent may satisfy an exact, narrowly scoped permission request on the operator's behalf when its harness permits, while preserving existing settings. It should report the requested rule only when it cannot grant it safely. Broad wildcard permissions and `--dangerously-skip-permissions` still require separate explicit operator authorisation.
 
 That means that once you are already inside a `pj`-launched agent session, ordinary follow-ups such as these should be enough:
 

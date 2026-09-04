@@ -34,7 +34,12 @@ done
 printf '\n'
 EOF
 
-chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" || exit 1
+cat > "$tmp/bin/projects" <<'EOF'
+#!/usr/bin/env bash
+printf 'projects\n'
+EOF
+
+chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" "$tmp/bin/projects" || exit 1
 
 test_config_home="$tmp/home/.config"
 test_bin_dir="$tmp/home/.local/bin"
@@ -44,11 +49,37 @@ HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bi
 [ -L "$test_bin_dir/pja" ] || exit 1
 [ -L "$test_bin_dir/pjcp" ] || exit 1
 [ -L "$test_bin_dir/pjcd" ] || exit 1
+[ -x "$test_bin_dir/pj-update-skills" ] || exit 1
 [ ! -e "$test_bin_dir/pjc" ] || exit 1
 [ "$(cat "$test_config_home/pj/install-bin-dir")" = "$test_bin_dir" ] || exit 1
 [ "$(cat "$test_config_home/pj/default-backend")" = "codex" ] || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.gemini/GEMINI.md" || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md" || exit 1
+
+# The projects CLI is optional. Its absence produces one useful note without
+# stopping pj installation.
+missing_projects_home="$tmp/missing-projects-home"
+missing_projects_bin="$tmp/missing-projects-bin"
+mkdir -p "$missing_projects_home/planning" "$missing_projects_home/.local/bin" "$missing_projects_bin" || exit 1
+cp "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" "$missing_projects_bin/" || exit 1
+for tool in awk cat chmod dirname grep install ln mkdir mktemp mv readlink rm stat touch; do
+  tool_path="$(command -v "$tool")" || exit 1
+  ln -s "$tool_path" "$missing_projects_bin/$tool" || exit 1
+done
+missing_projects_output="$(
+  HOME="$missing_projects_home" \
+    XDG_CONFIG_HOME="$missing_projects_home/.config" \
+    PATH="$missing_projects_home/.local/bin:$missing_projects_bin" \
+    /bin/bash "$installer" 2>&1
+)" || exit 1
+case "$missing_projects_output" in
+  *'Note: the optional projects CLI is not currently on PATH. pj still works;'*) ;;
+  *)
+    printf 'Expected the installer to explain that projects is optional.\nActual output:\n%s\n' "$missing_projects_output" >&2
+    exit 1
+    ;;
+esac
+[ -x "$missing_projects_home/.local/bin/pj" ] || exit 1
 
 run_named() {
   name="$1"
@@ -271,6 +302,16 @@ ln -sfn "$test_bin_dir/pj" "$test_bin_dir/pjc" || exit 1
 HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 [ ! -e "$test_bin_dir/pjc" ] || exit 1
 
+# A user-owned pjc command is unrelated to the retired managed alias.
+cat > "$test_bin_dir/pjc" <<'EOF'
+#!/usr/bin/env bash
+printf 'custom pjc\n'
+EOF
+chmod +x "$test_bin_dir/pjc" || exit 1
+cp "$test_bin_dir/pjc" "$tmp/custom-pjc-before" || exit 1
+HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+cmp "$tmp/custom-pjc-before" "$test_bin_dir/pjc" || exit 1
+
 # If ~/.local/bin is not on PATH but ~/bin is, select ~/bin.
 home_bin_home="$tmp/home-bin"
 mkdir -p "$home_bin_home/planning" "$home_bin_home/bin" || exit 1
@@ -286,16 +327,17 @@ HOME="$fallback_home" XDG_CONFIG_HOME="$fallback_home/.config" PATH="$tmp/bin:/u
 [ -x "$fallback_home/.local/bin/pj" ] || exit 1
 [ "$(cat "$fallback_home/.config/pj/install-bin-dir")" = "$fallback_home/.local/bin" ] || exit 1
 
-# PJ_BIN_DIR is the explicit escape hatch and accepts a ~/ prefix.
+# PJ_BIN_DIR is the explicit escape hatch, accepts a ~/ prefix and normalises a
+# trailing slash so PATH and migration comparisons stay stable.
 override_home="$tmp/override-home"
 mkdir -p "$override_home/planning" || exit 1
-HOME="$override_home" XDG_CONFIG_HOME="$override_home/.config" PJ_BIN_DIR='~/tools/bin' PATH="$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
+HOME="$override_home" XDG_CONFIG_HOME="$override_home/.config" PJ_BIN_DIR='~/tools/bin/' PATH="$override_home/tools/bin:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 [ -x "$override_home/tools/bin/pj" ] || exit 1
 [ "$(cat "$override_home/.config/pj/install-bin-dir")" = "$override_home/tools/bin" ] || exit 1
 
 # Migrate the historical ~/bin installer layout when the exact managed symlink
-# pattern proves the old files belong to pj. This prevents an old ~/bin/pj from
-# shadowing the newly selected ~/.local/bin installation.
+# pattern proves the old files belong to pj. The oldest layout had pjc rather
+# than pjcp, so the migration test deliberately omits pjcp.
 migration_home="$tmp/migration-home"
 migration_old_bin="$migration_home/bin"
 migration_new_bin="$migration_home/.local/bin"
@@ -303,14 +345,12 @@ mkdir -p "$migration_home/planning" "$migration_old_bin" "$migration_new_bin" ||
 cp "$operator_dir/pj" "$migration_old_bin/pj" || exit 1
 chmod +x "$migration_old_bin/pj" || exit 1
 ln -s "$migration_old_bin/pj" "$migration_old_bin/pja" || exit 1
-ln -s "$migration_old_bin/pj" "$migration_old_bin/pjcp" || exit 1
 ln -s "$migration_old_bin/pj" "$migration_old_bin/pjcd" || exit 1
 ln -s "$migration_old_bin/pj" "$migration_old_bin/pjc" || exit 1
 HOME="$migration_home" XDG_CONFIG_HOME="$migration_home/.config" PATH="$migration_new_bin:$migration_old_bin:$tmp/bin:$PATH" bash "$installer" >/dev/null || exit 1
 [ -x "$migration_new_bin/pj" ] || exit 1
 [ ! -e "$migration_old_bin/pj" ] || exit 1
 [ ! -e "$migration_old_bin/pja" ] || exit 1
-[ ! -e "$migration_old_bin/pjcp" ] || exit 1
 [ ! -e "$migration_old_bin/pjcd" ] || exit 1
 [ ! -e "$migration_old_bin/pjc" ] || exit 1
 [ "$(cat "$migration_home/.config/pj/install-bin-dir")" = "$migration_new_bin" ] || exit 1
