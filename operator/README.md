@@ -2,7 +2,7 @@
 
 `pj` runs the configured local agent against `${PJ_WORKSPACE:-~/planning}`. The backend shorthands are `pja` for Antigravity, `pjcp` for GitHub Copilot CLI and `pjcd` for Codex.
 
-The installer maintains a bounded `pj` block in `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. That workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed block is preserved on reinstall.
+The installer maintains bounded `pj` blocks in `~/AGENTS.md` and `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. The home-level file tells agents about local operator maintenance, including the shared skill updater. The workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed blocks is preserved on reinstall.
 
 That means that once you are already inside a `pj`-launched agent session, ordinary follow-ups such as these should be enough:
 
@@ -20,6 +20,27 @@ Prompt-launched terminal sessions are conversational by default. Use `-o` (or `-
 pj -o "Update the issue and verify it"
 pjcp -o -- "Check this Project state once"
 ```
+
+## Update the shared Project skill everywhere
+
+The installer also provides:
+
+```bash
+pj-update-skills
+```
+
+Run it when you want to refresh `github-project-admin` across the managed repositories under `${PJ_WORKSPACE:-~/planning}`. The updater:
+
+1. temporarily stashes existing local work in each repository;
+2. fetches upstream changes and uses an explicit non-fast-forward merge when the upstream is not already contained locally;
+3. runs `gh skill update github-project-admin --all` in repositories with the installed skill;
+4. commits only the resulting skill refresh as `Update github-project-admin skill`;
+5. pushes the current branch; and
+6. restores the local work it temporarily stashed.
+
+The canonical `projects` repository is synced but is not asked to update an installed copy of its own skill. A repository that cannot merge, update, push or restore its stash is reported as a failure rather than silently treated as successful.
+
+Agents launched under the home or planning `AGENTS.md` guidance are told to use `pj-update-skills` when the operator explicitly asks them to update the shared skill across local repositories, instead of building another one-off shell loop.
 
 ## Chat implementation queue
 
