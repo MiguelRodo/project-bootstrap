@@ -32,8 +32,8 @@ unchanged_count=0
 failed_count=0
 
 restore_stash() {
-  repo_path="$1"
-  had_stash="$2"
+  local repo_path="$1"
+  local had_stash="$2"
 
   [ "$had_stash" -eq 1 ] || return 0
 
@@ -48,9 +48,14 @@ restore_stash() {
 }
 
 update_repo() {
-  repo_path="$1"
+  local repo_path="$1"
+  local repo_name
+  local had_stash=0
+  local branch
+  local upstream
+  local repo_updated=0
+
   repo_name="$(basename "$repo_path")"
-  had_stash=0
 
   echo
   echo "============================================================"
@@ -135,7 +140,6 @@ update_repo() {
       repo_updated=1
     else
       echo "Skill already current; nothing to commit."
-      repo_updated=0
     fi
   fi
 
@@ -161,7 +165,7 @@ update_repo() {
     return 1
   fi
 
-  if [ "${repo_updated:-0}" -eq 1 ]; then
+  if [ "$repo_updated" -eq 1 ]; then
     updated_count=$((updated_count + 1))
   else
     unchanged_count=$((unchanged_count + 1))
