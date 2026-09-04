@@ -2,6 +2,7 @@
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || exit 1
 launcher_source="$script_dir/pj"
+skill_update_source="$script_dir/update-managed-skills.sh"
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 config_dir="$config_home/pj"
 default_backend_file="$config_dir/default-backend"
@@ -70,6 +71,7 @@ launcher_target="$launcher_dir/pj"
 antigravity_target="$launcher_dir/pja"
 copilot_target="$launcher_dir/pjcp"
 codex_target="$launcher_dir/pjcd"
+skill_update_target="$launcher_dir/pj-update-skills"
 legacy_copilot_target="$launcher_dir/pjc"
 
 mkdir -p "$launcher_dir" "$config_dir" "$workspace" || exit 1
@@ -92,6 +94,7 @@ remove_previous_managed_install() {
   previous_pja="$previous_dir/pja"
   previous_pjcp="$previous_dir/pjcp"
   previous_pjcd="$previous_dir/pjcd"
+  previous_skill_update="$previous_dir/pj-update-skills"
   previous_pjc="$previous_dir/pjc"
 
   # Only treat the directory as installer-managed when all three current
@@ -100,6 +103,7 @@ remove_previous_managed_install() {
   if managed_aliases_point_to "$previous_target" \
       "$previous_pja" "$previous_pjcp" "$previous_pjcd"; then
     rm -f "$previous_pja" "$previous_pjcp" "$previous_pjcd" || exit 1
+    rm -f "$previous_skill_update" || exit 1
     if [ -L "$previous_pjc" ] && [ "$(readlink "$previous_pjc")" = "$previous_target" ]; then
       rm -f "$previous_pjc" || exit 1
     fi
@@ -119,6 +123,7 @@ elif [ "$launcher_dir" != "$HOME/bin" ]; then
 fi
 
 install -m 0755 "$launcher_source" "$launcher_target" || exit 1
+install -m 0755 "$skill_update_source" "$skill_update_target" || exit 1
 ln -sfn "$launcher_target" "$antigravity_target" || exit 1
 ln -sfn "$launcher_target" "$copilot_target" || exit 1
 ln -sfn "$launcher_target" "$codex_target" || exit 1
@@ -163,6 +168,32 @@ update_managed_context() {
   mv "$tmp_context" "$target" || return 1
 }
 
+home_context="$HOME/AGENTS.md"
+update_managed_context "$home_context" <<'EOF'
+
+<!-- pj-managed-projects:start -->
+## Local `pj` operator maintenance
+
+The shared local planning workspace is `${PJ_WORKSPACE:-~/planning}`. When the
+operator explicitly asks to update or refresh the installed
+`github-project-admin` skill across the managed repositories in that workspace,
+run `pj-update-skills` rather than constructing an ad hoc repository loop.
+
+`pj-update-skills` temporarily stashes pre-existing local work, fetches and
+merges upstream changes with an explicit merge commit when needed, updates the
+installed `github-project-admin` skill non-interactively, commits only the skill
+refresh, pushes the branch and restores the operator's previous local work. It
+skips the installed-skill refresh in the canonical `projects` source repository.
+If a repository fails to merge, update, push or restore its stash, report the
+exact repository and error rather than claiming the whole update succeeded.
+
+For ordinary GitHub task and Project administration, continue into the planning
+workspace and follow its `AGENTS.md`, then the resolved repository's own
+`AGENTS.md` and `.projects` contract. This home-level block is operator routing,
+not a replacement for repository-specific guidance.
+<!-- pj-managed-projects:end -->
+EOF
+
 workspace_context="$workspace/AGENTS.md"
 update_managed_context "$workspace_context" <<'EOF'
 
@@ -187,6 +218,11 @@ For each such request:
    rather than inventing provider-specific task logic;
 5. preserve unrelated state, stop on consequential ambiguity, and independently
    read back every completed GitHub mutation before reporting success.
+
+If the operator explicitly asks to update or refresh `github-project-admin`
+across the local managed repositories, use `pj-update-skills`. Do not recreate a
+one-off loop unless that installed updater is unavailable. Treat this as local
+operator maintenance rather than an issue or Project mutation.
 
 For implementation-queue requests, follow `github-project-admin`'s
 `references/local-implementation-queue.md`, including its trust and review rules.
@@ -231,8 +267,10 @@ printf 'Installed pj at %s\n' "$launcher_target"
 printf 'Installed pja -> pj at %s\n' "$antigravity_target"
 printf 'Installed pjcp -> pj at %s\n' "$copilot_target"
 printf 'Installed pjcd -> pj at %s\n' "$codex_target"
+printf 'Installed pj-update-skills at %s\n' "$skill_update_target"
 printf 'Recorded pj install directory in %s\n' "$install_bin_dir_file"
 printf 'Configured pj default backend in %s\n' "$default_backend_file"
+printf 'Updated home agent guidance at %s\n' "$home_context"
 printf 'Updated shared workspace guidance at %s\n' "$workspace_context"
 printf 'Updated Antigravity global context at %s\n' "$gemini_context"
 printf 'Updated Copilot global context at %s\n' "$copilot_context"
