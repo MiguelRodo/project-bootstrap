@@ -2,6 +2,14 @@
 
 `pj` runs the configured local agent against `${PJ_WORKSPACE:-~/planning}`. The backend shorthands are `pja` for Antigravity, `pjcp` for GitHub Copilot CLI and `pjcd` for Codex.
 
+`pj` is not an alias for the optional `projects` Go CLI. The launcher chooses an
+agent and keeps its conversation open; `projects` handles supported deterministic
+GitHub Project operations. An agent started by `pj` may use that binary when it
+is installed, then follow the repository scripts or direct GitHub path when it
+is not. See the
+[`projects` CLI guide](https://github.com/MiguelRodo/projects/blob/main/docs/cli.md)
+for installation and read-only update checks.
+
 The installer maintains bounded `pj` blocks in `~/AGENTS.md` and `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. The home-level file tells agents about local operator maintenance, including the shared skill updater. The workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed blocks is preserved on reinstall.
 
 That means that once you are already inside a `pj`-launched agent session, ordinary follow-ups such as these should be enough:

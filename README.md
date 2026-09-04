@@ -15,6 +15,23 @@ returns the smallest executable `gh` command block and verifies the result after
 the user runs it. ChatGPT Project creation remains a verified manual checklist
 in version 1.
 
+## Optional `projects` CLI
+
+`MiguelRodo/projects` now has an optional Go CLI for repeated GitHub operations
+that benefit from one tested implementation. It validates the existing
+`.projects/` contract and can read a complete Project item set without relying
+on `gh project item-list`'s default page.
+
+There is no separate project-bootstrap CLI. This repository still coordinates
+GitHub, Drive, the registry and the ChatGPT Project handoff through its skill.
+It can use `projects` for a command the binary supports, while keeping the
+current scripts and provider operations as fallbacks.
+
+`pj` also stays separate. It chooses and launches a local agent; `projects`
+performs deterministic administration. Installation and signed APT repository
+instructions are in the
+[`projects` CLI guide](https://github.com/MiguelRodo/projects/blob/main/docs/cli.md).
+
 ## Install the skill
 
 With a current GitHub CLI:

@@ -287,6 +287,10 @@ if ! command -v copilot >/dev/null 2>&1; then
   printf 'Note: copilot is not currently on PATH. Install and authenticate GitHub Copilot CLI before using pjcp.\n' >&2
 fi
 
+if ! command -v projects >/dev/null 2>&1; then
+  printf 'Note: the optional projects CLI is not currently on PATH. pj still works; installation instructions are at https://github.com/MiguelRodo/projects/blob/main/docs/cli.md.\n' >&2
+fi
+
 if ! path_contains_dir "$launcher_dir"; then
   printf 'Note: %s is not currently on PATH. Add it in your shell startup file or rerun with PJ_BIN_DIR set to a suitable user bin directory.\n' "$launcher_dir" >&2
 fi

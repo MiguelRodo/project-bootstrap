@@ -34,7 +34,12 @@ done
 printf '\n'
 EOF
 
-chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" || exit 1
+cat > "$tmp/bin/projects" <<'EOF'
+#!/usr/bin/env bash
+printf 'projects\n'
+EOF
+
+chmod +x "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" "$tmp/bin/projects" || exit 1
 
 test_config_home="$tmp/home/.config"
 test_bin_dir="$tmp/home/.local/bin"
@@ -49,6 +54,27 @@ HOME="$tmp/home" XDG_CONFIG_HOME="$test_config_home" PATH="$test_bin_dir:$tmp/bi
 [ "$(cat "$test_config_home/pj/default-backend")" = "codex" ] || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.gemini/GEMINI.md" || exit 1
 grep -q 'pj-managed-projects:start' "$tmp/home/.copilot/copilot-instructions.md" || exit 1
+
+# The projects CLI is optional. Its absence produces one useful note without
+# stopping pj installation.
+missing_projects_home="$tmp/missing-projects-home"
+missing_projects_bin="$tmp/missing-projects-bin"
+mkdir -p "$missing_projects_home/planning" "$missing_projects_home/.local/bin" "$missing_projects_bin" || exit 1
+cp "$tmp/bin/codex" "$tmp/bin/agy" "$tmp/bin/copilot" "$missing_projects_bin/" || exit 1
+missing_projects_output="$(
+  HOME="$missing_projects_home" \
+    XDG_CONFIG_HOME="$missing_projects_home/.config" \
+    PATH="$missing_projects_home/.local/bin:$missing_projects_bin:/usr/bin:/bin" \
+    bash "$installer" 2>&1
+)" || exit 1
+case "$missing_projects_output" in
+  *'Note: the optional projects CLI is not currently on PATH. pj still works;'*) ;;
+  *)
+    printf 'Expected the installer to explain that projects is optional.\nActual output:\n%s\n' "$missing_projects_output" >&2
+    exit 1
+    ;;
+esac
+[ -x "$missing_projects_home/.local/bin/pj" ] || exit 1
 
 run_named() {
   name="$1"
