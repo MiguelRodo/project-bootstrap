@@ -6,6 +6,7 @@ config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 config_dir="$config_home/pj"
 default_backend_file="$config_dir/default-backend"
 install_bin_dir_file="$config_dir/install-bin-dir"
+workspace="${PJ_WORKSPACE:-$HOME/planning}"
 
 path_contains_dir() {
   case ":$PATH:" in
@@ -71,7 +72,7 @@ copilot_target="$launcher_dir/pjcp"
 codex_target="$launcher_dir/pjcd"
 legacy_copilot_target="$launcher_dir/pjc"
 
-mkdir -p "$launcher_dir" "$config_dir" || exit 1
+mkdir -p "$launcher_dir" "$config_dir" "$workspace" || exit 1
 
 managed_aliases_point_to() {
   target="$1"
@@ -139,67 +140,92 @@ fi
 start_marker='<!-- pj-managed-projects:start -->'
 end_marker='<!-- pj-managed-projects:end -->'
 
-gemini_dir="$HOME/.gemini"
-gemini_context="$gemini_dir/GEMINI.md"
-mkdir -p "$gemini_dir" || exit 1
-touch "$gemini_context" || exit 1
+update_managed_context() {
+  target="$1"
+  target_dir="$(dirname "$target")"
+  mkdir -p "$target_dir" || return 1
+  touch "$target" || return 1
 
-tmp_context="$(mktemp)" || exit 1
-awk -v start="$start_marker" -v end="$end_marker" '
-  $0 == start { in_block = 1; next }
-  $0 == end { in_block = 0; next }
-  !in_block { print }
-' "$gemini_context" > "$tmp_context" || {
-  rm -f "$tmp_context"
-  exit 1
+  tmp_context="$(mktemp)" || return 1
+  awk -v start="$start_marker" -v end="$end_marker" '
+    $0 == start { in_block = 1; next }
+    $0 == end { in_block = 0; next }
+    !in_block { print }
+  ' "$target" > "$tmp_context" || {
+    rm -f "$tmp_context"
+    return 1
+  }
+
+  cat >> "$tmp_context" || {
+    rm -f "$tmp_context"
+    return 1
+  }
+  mv "$tmp_context" "$target" || return 1
 }
 
-cat >> "$tmp_context" <<'EOF'
+workspace_context="$workspace/AGENTS.md"
+update_managed_context "$workspace_context" <<'EOF'
+
+<!-- pj-managed-projects:start -->
+## Shared `pj` planning workspace
+
+This directory is the shared local operator workspace used by `pj`. Natural-language
+requests to add, update, close or organise GitHub issues, change GitHub Project
+fields or membership, or process Chat implementation queue items are GitHub task
+and Project-administration requests unless the operator explicitly asks for
+repository code changes.
+
+For each such request:
+
+1. resolve the target only from the managed repositories and `.projects`
+   contracts available in this workspace;
+2. read and follow the target repository's root `AGENTS.md`;
+3. read `.projects/project.md` plus the one Project contract it resolves and use
+   the shared `github-project-admin` skill named by the repository guidance;
+4. interpret ordinary phrases such as "add an issue to X", "set this to P3" or
+   "process the implementation issues for X" through those checked contracts
+   rather than inventing provider-specific task logic;
+5. preserve unrelated state, stop on consequential ambiguity, and independently
+   read back every completed GitHub mutation before reporting success.
+
+For implementation-queue requests, follow `github-project-admin`'s
+`references/local-implementation-queue.md`, including its trust and review rules.
+A repository or Project name supplied by the operator narrows resolution to the
+corresponding managed target; do not broaden to arbitrary accessible repositories.
+
+This workspace-level guidance is only a dispatcher. A target repository's own
+`AGENTS.md`, `.projects` contract and current GitHub state remain authoritative
+for that target.
+<!-- pj-managed-projects:end -->
+EOF
+
+gemini_context="$HOME/.gemini/GEMINI.md"
+update_managed_context "$gemini_context" <<'EOF'
 
 <!-- pj-managed-projects:start -->
 ## GitHub Project administration from `pj`
 
-When `pja` or `pj --backend antigravity` launches Antigravity from the shared
-planning workspace for a GitHub issue or Project-administration request, first
-resolve the target repository and read and follow that repository's `AGENTS.md`.
-Let its instructions route you to the repository's `.projects` contract and
-shared `github-project-admin` skill. Do not define a separate Project model for
-Antigravity.
+When `pja` or `pj --backend antigravity` launches Antigravity in the shared
+planning workspace, read and follow the workspace `AGENTS.md` first. For a
+resolved GitHub target, then follow that repository's own `AGENTS.md`, `.projects`
+contract and shared `github-project-admin` guidance. Do not define a separate
+Antigravity task or Project model.
 <!-- pj-managed-projects:end -->
 EOF
 
-mv "$tmp_context" "$gemini_context" || exit 1
-
-copilot_dir="$HOME/.copilot"
-copilot_context="$copilot_dir/copilot-instructions.md"
-mkdir -p "$copilot_dir" || exit 1
-touch "$copilot_context" || exit 1
-
-tmp_context="$(mktemp)" || exit 1
-awk -v start="$start_marker" -v end="$end_marker" '
-  $0 == start { in_block = 1; next }
-  $0 == end { in_block = 0; next }
-  !in_block { print }
-' "$copilot_context" > "$tmp_context" || {
-  rm -f "$tmp_context"
-  exit 1
-}
-
-cat >> "$tmp_context" <<'EOF'
+copilot_context="$HOME/.copilot/copilot-instructions.md"
+update_managed_context "$copilot_context" <<'EOF'
 
 <!-- pj-managed-projects:start -->
 ## GitHub Project administration from `pj`
 
-When `pjcp` or `pj --backend copilot` launches GitHub Copilot CLI from the shared
-planning workspace for a GitHub issue or Project-administration request, first
-resolve the target repository and read and follow that repository's `AGENTS.md`.
-Let its instructions route you to the repository's `.projects` contract and
-shared `github-project-admin` skill. Do not define a separate Project model for
-Copilot.
+When `pjcp` or `pj --backend copilot` launches GitHub Copilot CLI in the shared
+planning workspace, read and follow the workspace `AGENTS.md` first. For a
+resolved GitHub target, then follow that repository's own `AGENTS.md`, `.projects`
+contract and shared `github-project-admin` guidance. Do not define a separate
+Copilot task or Project model.
 <!-- pj-managed-projects:end -->
 EOF
-
-mv "$tmp_context" "$copilot_context" || exit 1
 
 printf 'Installed pj at %s\n' "$launcher_target"
 printf 'Installed pja -> pj at %s\n' "$antigravity_target"
@@ -207,6 +233,7 @@ printf 'Installed pjcp -> pj at %s\n' "$copilot_target"
 printf 'Installed pjcd -> pj at %s\n' "$codex_target"
 printf 'Recorded pj install directory in %s\n' "$install_bin_dir_file"
 printf 'Configured pj default backend in %s\n' "$default_backend_file"
+printf 'Updated shared workspace guidance at %s\n' "$workspace_context"
 printf 'Updated Antigravity global context at %s\n' "$gemini_context"
 printf 'Updated Copilot global context at %s\n' "$copilot_context"
 

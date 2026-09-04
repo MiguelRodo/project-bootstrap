@@ -2,6 +2,18 @@
 
 `pj` runs the configured local agent against `${PJ_WORKSPACE:-~/planning}`. The backend shorthands are `pja` for Antigravity, `pjcp` for GitHub Copilot CLI and `pjcd` for Codex.
 
+The installer maintains a bounded `pj` block in `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. That workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed block is preserved on reinstall.
+
+That means that once you are already inside a `pj`-launched agent session, ordinary follow-ups such as these should be enough:
+
+```text
+Add an issue to work that I need to do X, P3.
+Process the implementation issues for MIMOSA-STAN.
+Set the issue we just created to P2 instead.
+```
+
+The workspace file is only a dispatcher. Repository-level `AGENTS.md`, `.projects` contracts and live GitHub state remain authoritative for target-specific behaviour.
+
 Prompt-launched terminal sessions are conversational by default. Use `-o` (or `--oneshot`) before agent-specific options or prompt text to force a single-turn run:
 
 ```bash

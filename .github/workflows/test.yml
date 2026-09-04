@@ -20,3 +20,5 @@ jobs:
         run: bash operator/tests/run.sh
       - name: Run pj queue option tests
         run: bash operator/tests/queue-options.sh
+      - name: Run workspace AGENTS context tests
+        run: bash operator/tests/workspace-context.sh
