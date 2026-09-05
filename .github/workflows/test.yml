@@ -24,3 +24,5 @@ jobs:
         run: bash operator/tests/workspace-context.sh
       - name: Run managed skill updater tests
         run: bash operator/tests/update-managed-skills.sh
+      - name: Check the public website
+        run: bash tests/site.sh

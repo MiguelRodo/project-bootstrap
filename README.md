@@ -15,6 +15,11 @@ returns the smallest executable `gh` command block and verifies the result after
 the user runs it. ChatGPT Project creation remains a verified manual checklist
 in version 1.
 
+The shorter public guide is at
+[miguelrodo.github.io/project-bootstrap](https://miguelrodo.github.io/project-bootstrap/).
+This repository remains the front door; it links to `MiguelRodo/projects` for
+the GitHub administration skill and CLI.
+
 ## Optional `projects` CLI
 
 `MiguelRodo/projects` now has an optional Go CLI for repeated GitHub operations
@@ -335,6 +340,21 @@ Run the offline launcher checks with:
 bash operator/tests/run.sh
 ```
 
+Check the public website with:
+
+```bash
+bash tests/site.sh
+```
+
+To preview it locally, run:
+
+```bash
+python3 -m http.server 8000 --directory site
+```
+
+then open `http://localhost:8000`. GitHub Pages deploys the same dependency-free
+files in `site/` after a change reaches `main`.
+
 ## What a completed setup contains
 
 - `work/projects/<year>/<research|lecturing>/<project-slug>/` in Google Drive;
@@ -357,6 +377,7 @@ live in [`skills/project-bootstrap/SKILL.md`](skills/project-bootstrap/SKILL.md)
 | `PROJECT_BOOTSTRAP.md` | Human-readable workflow and postconditions. |
 | `skills/project-bootstrap/` | Installable Agent Skill. |
 | `operator/` | One-time local `pj`/`pja`/`pjcp`/`pjcd` launcher, skill updater and installer. |
+| `site/` | Public guide deployed through GitHub Pages. |
 | `templates/drive-readme.md` | Minimal native Google Doc README shape. |
 | `templates/repository-resources.md` | Bounded repository README section. |
 
