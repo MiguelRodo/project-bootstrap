@@ -20,6 +20,11 @@ The shorter public guide is at
 This repository remains the front door; it links to `MiguelRodo/projects` for
 the GitHub administration skill and CLI.
 
+The website includes guides for the
+[full Drive, registry and ChatGPT setup](https://miguelrodo.github.io/project-bootstrap/#full-setup),
+[adding another GitHub Project](https://miguelrodo.github.io/project-bootstrap/#add-project)
+and [setting up the local implementation queue](https://miguelrodo.github.io/project-bootstrap/#implementation-queue).
+
 ## Optional `projects` CLI
 
 `MiguelRodo/projects` now has an optional Go CLI for repeated GitHub operations

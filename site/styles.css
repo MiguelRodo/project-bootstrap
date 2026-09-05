@@ -758,6 +758,72 @@ pre {
   font-size: 0.74rem;
 }
 
+.section-guides {
+  background: var(--white);
+}
+
+.guide-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 52px;
+}
+
+.guide-nav a {
+  padding: 12px 18px;
+  color: var(--teal-dark);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.guide-nav a:hover {
+  border-color: var(--teal);
+}
+
+.setup-guide {
+  max-width: 82ch;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.setup-guide + .setup-guide {
+  margin-top: 64px;
+}
+
+.setup-guide p:not(.eyebrow) {
+  color: var(--ink-soft);
+}
+
+.setup-guide a {
+  color: var(--teal);
+  text-underline-offset: 3px;
+}
+
+.guide-steps {
+  padding-left: 1.5em;
+}
+
+.guide-steps > li {
+  padding-left: 0.5em;
+  margin-top: 30px;
+}
+
+.guide-steps > li::marker {
+  color: var(--orange);
+  font-weight: 750;
+}
+
+.guide-steps h4 {
+  margin: 0 0 10px;
+  font-size: 1.08rem;
+  line-height: 1.4;
+}
+
 .section-cli {
   color: var(--white);
   background: var(--teal-dark);
