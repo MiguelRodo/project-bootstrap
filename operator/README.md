@@ -71,12 +71,14 @@ Set the issue we just created to P2 instead.
 
 The workspace file is only a dispatcher. Repository-level `AGENTS.md`, `.projects` contracts and live GitHub state remain authoritative for target-specific behaviour.
 
-Prompt-launched terminal sessions are conversational by default. Use `-o` (or `--oneshot`) before agent-specific options or prompt text to force a single-turn run:
+Prompt-launched terminal sessions are conversational by default. Use `-o` (or `--oneshot`) anywhere in the leading `pj`-owned option prefix, before agent-specific options or prompt text, to force a single-turn run:
 
 ```bash
 pj -o "Update the issue and verify it"
 pjcp -o -- "Check this Project state once"
 ```
+
+`pj` stops ingesting launcher options at the first token that is not a recognised `pj` option or a required value for one. From that point, later dash-prefixed fragments are not reconsidered as launcher flags. For agent-specific options, a literal `--` remains the unambiguous separator when an option takes a separate non-dash value.
 
 ## Update the shared Project skill everywhere
 
@@ -121,10 +123,12 @@ pj -i --repo MiguelRodo/projects
 
 A bare selector value such as `issues` matches every managed issue repository with that repository name regardless of owner. Therefore it can intentionally match both `MiguelRodo/issues` and `SATVILab/issues`. An `owner/repo` selector matches that exact managed repository. Matching never broadens beyond repositories already declared by the local managed-project contracts.
 
-Use `-o` before queue mode when a terminal run should exit after the queue-processing turn:
+Queue mode composes with other `pj`-owned options in the same leading prefix, so one-shot queue runs may put `-o` before or after `-i` and the repository selector:
 
 ```bash
 pj -o -i -r projects
+pj -i -o -r projects
+pj -i -r projects --oneshot
 ```
 
 The launcher does not implement GitHub queue discovery itself. It validates and passes the optional selector to the agent, while the canonical matching, trust, mutation and readback rules remain in `github-project-admin`.
