@@ -66,6 +66,24 @@ assert_contains "$oneshot" '<-p>'
 assert_not_contains "$oneshot" '<-i>'
 assert_contains "$oneshot" '<Exit after this turn>'
 
+# pj-owned options can be combined in either order before request text begins.
+queue_oneshot_short="$(PJ_BACKEND=copilot PJ_SESSION_MODE=interactive run_pj -i -o)" || exit 1
+assert_contains "$queue_oneshot_short" 'copilot'
+assert_contains "$queue_oneshot_short" '<-p>'
+assert_not_contains "$queue_oneshot_short" '<-i>'
+assert_contains "$queue_oneshot_short" 'Process the Chat implementation queue across the managed repositories in this workspace.'
+
+queue_oneshot_long="$(PJ_BACKEND=copilot PJ_SESSION_MODE=interactive run_pj -i --oneshot --repo projects)" || exit 1
+assert_contains "$queue_oneshot_long" '<-p>'
+assert_not_contains "$queue_oneshot_long" '<-i>'
+assert_contains "$queue_oneshot_long" "Restrict queue discovery to the repository selector 'projects'"
+
+queue_mixed_order="$(PJ_SESSION_MODE=interactive run_pj -r projects --backend copilot -i -o)" || exit 1
+assert_contains "$queue_mixed_order" 'copilot'
+assert_contains "$queue_mixed_order" '<-p>'
+assert_not_contains "$queue_mixed_order" '<-i>'
+assert_contains "$queue_mixed_order" "Restrict queue discovery to the repository selector 'projects'"
+
 # Queue mode accepts a bare repository name through -r/--repo.
 bare_repo="$(PJ_BACKEND=codex run_pj -i -r issues)" || exit 1
 assert_contains "$bare_repo" '<exec>'
@@ -85,7 +103,20 @@ all_repos="$(PJ_BACKEND=codex run_pj --implement-issues)" || exit 1
 assert_contains "$all_repos" 'Process the Chat implementation queue across the managed repositories in this workspace.'
 assert_not_contains "$all_repos" 'Restrict queue discovery to the repository selector'
 
-# Queue mode remains intentionally narrow: selectors must use the explicit repo option.
+# Queue mode remains narrow: ordinary text is not another pj parameter. Once
+# encountered, pj-level option ingestion stops and later dash-prefixed text is
+# not reconsidered as a flag.
+set +e
+queue_boundary_error="$(PJ_BACKEND=codex run_pj -i xosdfa -a 2>&1)"
+queue_boundary_status=$?
+set -e
+if [ "$queue_boundary_status" -eq 0 ]; then
+  echo 'pj -i unexpectedly accepted prompt text' >&2
+  exit 1
+fi
+assert_contains "$queue_boundary_error" 'unexpected argument: xosdfa'
+assert_not_contains "$queue_boundary_error" 'unexpected argument: -a'
+
 if PJ_BACKEND=codex run_pj -i issues >/dev/null 2>&1; then
   echo 'pj -i unexpectedly accepted a positional repository selector' >&2
   exit 1
@@ -95,5 +126,18 @@ if PJ_BACKEND=codex run_pj -i -r '../issues' >/dev/null 2>&1; then
   echo 'pj -i unexpectedly accepted an invalid repository selector' >&2
   exit 1
 fi
+
+# Without an explicit -- separator, the first ordinary token starts prompt
+# text and all later dash-prefixed fragments stay in that prompt.
+prompt_boundary="$(PJ_BACKEND=codex run_pj -a prompt-text -b)" || exit 1
+assert_contains "$prompt_boundary" '<-a>'
+assert_contains "$prompt_boundary" '<prompt-text -b>'
+assert_not_contains "$prompt_boundary" '<-b>'
+
+# A literal -- still allows agent options with separate non-dash values.
+agent_value="$(PJ_BACKEND=codex run_pj --model test-model -- 'Prompt - with dash')" || exit 1
+assert_contains "$agent_value" '<--model>'
+assert_contains "$agent_value" '<test-model>'
+assert_contains "$agent_value" '<Prompt - with dash>'
 
 printf 'pj queue option tests passed\n'
