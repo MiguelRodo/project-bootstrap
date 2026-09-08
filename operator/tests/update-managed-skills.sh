@@ -74,6 +74,12 @@ if [ "$1" = 'skill' ] && [ "$2" = 'install' ] && \
    [ "$3" = 'MiguelRodo/github-projects-skill' ] && [ "$4" = 'github-projects' ] && \
    [ "$5" = '--agent' ] && [ "$6" = 'universal' ] && \
    [ "$7" = '--scope' ] && [ "$8" = 'project' ] && [ "$9" = '--force' ]; then
+  if [ -n "$FAIL_SKILL_INSTALL" ]; then
+    mkdir -p .agents/skills/github-projects
+    printf 'corrupted partial state\n' > .agents/skills/github-projects/PARTIAL.tmp
+    printf 'ERROR: simulated gh skill install failure\n' >&2
+    exit 1
+  fi
   mkdir -p .agents/skills/github-projects
   cat > .agents/skills/github-projects/SKILL.md <<'SKILL_EOF'
 ---
@@ -120,6 +126,34 @@ exit 2
 EOF
 chmod +x "$fake_bin/gh" || exit 1
 
+# Regression test: simulated failed gh skill install during migration must be transactional
+if HOME="$home" \
+   PJ_WORKSPACE="$workspace" \
+   FAIL_SKILL_INSTALL=1 \
+   PATH="$fake_bin:/usr/bin:/bin" \
+   bash "$updater" >/dev/null 2>&1; then
+  echo "ERROR: updater unexpectedly succeeded when gh skill install failed" >&2
+  exit 1
+fi
+
+# Assertions after failed migration on legacy_demo:
+# 1. Non-zero exit (verified above)
+# 2. Legacy skill preserved
+[ -f "$workspace/legacy_demo/.agents/skills/github-project-admin/SKILL.md" ] || exit 1
+grep -Fq 'name: github-project-admin' "$workspace/legacy_demo/.agents/skills/github-project-admin/SKILL.md" || exit 1
+grep -Fq 'github-repo: https://github.com/MiguelRodo/projects' "$workspace/legacy_demo/.agents/skills/github-project-admin/SKILL.md" || exit 1
+
+# 3. No half-installed replacement state committed or pushed or left on disk
+[ ! -e "$workspace/legacy_demo/.agents/skills/github-projects" ] || exit 1
+[ "$(git -C "$workspace/legacy_demo" log -1 --pretty=%s)" = 'Initial legacy repository' ] || exit 1
+! git --git-dir="$legacy_remote" rev-parse --verify main:.agents/skills/github-projects/SKILL.md >/dev/null 2>&1 || exit 1
+
+# 4. Pre-existing uncommitted work restored
+[ "$(cat "$workspace/legacy_demo/local.txt")" = 'legacy unfinished work' ] || exit 1
+[ -n "$(git -C "$workspace/legacy_demo" status --porcelain -- local.txt)" ] || exit 1
+git --git-dir="$legacy_remote" show main:local.txt | grep -Fxq 'legacy remote baseline' || exit 1
+
+# Subsequent retry / successful run succeeds
 HOME="$home" \
   PJ_WORKSPACE="$workspace" \
   PATH="$fake_bin:/usr/bin:/bin" \
