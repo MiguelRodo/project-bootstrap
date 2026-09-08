@@ -95,8 +95,10 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh
 ```
 
 The initializer owns `.projects/project.md`, multi-Project dispatching and the
-bounded `AGENTS.md` routing section. Supply the verified Project owner and
-number when prompted. It must not change live issues, fields or Project values.
+bounded `AGENTS.md` routing section. Supply the authoritative issue repository
+(accept the default to store issues in the same repository, or specify an existing
+separate issue repository), and the verified Project owner and number when prompted.
+It must not change live issues, fields or Project values.
 
 After it resolves one contract, add these repository-specific source rules to
 that contract's Governance section using the verified URLs:
