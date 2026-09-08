@@ -57,6 +57,22 @@ restore_stash() {
   return 1
 }
 
+restore_skills() {
+  local repo_path="$1"
+  local backup_dir="$2"
+
+  git -C "$repo_path" reset --quiet -- ".agents/skills" 2>/dev/null || true
+  git -C "$repo_path" checkout --quiet -- ".agents/skills" 2>/dev/null || true
+  git -C "$repo_path" clean -fd --quiet -- ".agents/skills" 2>/dev/null || true
+
+  rm -rf "$repo_path/.agents/skills"
+  if [ -d "$backup_dir/skills" ]; then
+    mkdir -p "$repo_path/.agents"
+    cp -a "$backup_dir/skills" "$repo_path/.agents/skills"
+  fi
+  rm -rf "$backup_dir"
+}
+
 update_repo() {
   local repo_path="$1"
   local repo_name
@@ -143,21 +159,27 @@ update_repo() {
       needs_migration=1
     fi
 
+    local skills_backup
+    skills_backup="$(mktemp -d)"
+    if [ -d "$repo_path/.agents/skills" ]; then
+      cp -a "$repo_path/.agents/skills" "$skills_backup/skills"
+    fi
+
     if [ "$needs_migration" -eq 1 ]; then
       echo "Migrating skill to $skill_name from $canonical_skill_repo..."
-      if [ -e "$repo_path/.agents/skills/$legacy_skill_name" ]; then
-        rm -rf "$repo_path/.agents/skills/$legacy_skill_name"
-      fi
-
-      if ! (cd "$repo_path" && gh skill install "$canonical_skill_repo" "$skill_name" --agent universal --scope project --force); then
+      if ! (cd "$repo_path" && gh skill install "$canonical_skill_repo" "$skill_name" --agent universal --scope project --force) || \
+         [ ! -f "$repo_path/.agents/skills/$skill_name/SKILL.md" ]; then
         echo "ERROR: skill installation/migration failed in $repo_name" >&2
+        restore_skills "$repo_path" "$skills_backup"
         restore_stash "$repo_path" "$had_stash" || true
         return 1
       fi
     else
       echo "Updating $skill_name..."
-      if ! (cd "$repo_path" && gh skill update "$skill_name" --all); then
+      if ! (cd "$repo_path" && gh skill update "$skill_name" --all) || \
+         [ ! -f "$repo_path/.agents/skills/$skill_name/SKILL.md" ]; then
         echo "ERROR: skill update failed in $repo_name" >&2
+        restore_skills "$repo_path" "$skills_backup"
         restore_stash "$repo_path" "$had_stash" || true
         return 1
       fi
@@ -166,6 +188,7 @@ update_repo() {
     if [ -e "$repo_path/.agents/skills/$legacy_skill_name" ]; then
       rm -rf "$repo_path/.agents/skills/$legacy_skill_name"
     fi
+    rm -rf "$skills_backup"
 
     if ! git -C "$repo_path" diff --quiet -- ".agents/skills" || \
        ! git -C "$repo_path" diff --cached --quiet -- ".agents/skills" || \
