@@ -488,7 +488,7 @@ if ! command -v copilot >/dev/null 2>&1; then
 fi
 
 if ! command -v projects >/dev/null 2>&1; then
-  printf 'Note: the optional projects CLI is not currently on PATH. pj still works; installation instructions are at https://github.com/MiguelRodo/projects/blob/main/docs/cli.md.\n' >&2
+  printf 'Note: the optional projects CLI is not currently on PATH. pj still works; installation instructions are at https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md.\n' >&2
 fi
 
 if ! path_contains_dir "$launcher_dir"; then
