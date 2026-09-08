@@ -84,7 +84,7 @@ the rest of the README byte-for-byte unchanged where practical. Follow the
 repository's own `AGENTS.md` and contribution rules.
 
 When both a repository and GitHub Project are used, onboard the repository with
-the public `github-project-admin` skill from `MiguelRodo/projects`. Store the
+the public `github-projects` skill from `MiguelRodo/github-projects-skill`. Store the
 verified Drive README and `references/llm` links as source requirements in the
 resolved `.projects/` contract. Do not reproduce field, priority, routing or
 mutation logic in this repository.
@@ -119,7 +119,7 @@ user confirms the completed checklist.
 | Drive | `references/llm/` exists and is empty unless the user supplied material. |
 | GitHub | Requested repository and Project identities are independently verified. |
 | GitHub | Repository README contains one bounded project-resources section. |
-| GitHub | When applicable, `github-project-admin` is installed and its `.projects/` contract validates. |
+| GitHub | When applicable, `github-projects` is installed and its `.projects/` contract validates. |
 | Registry | Exactly one Projects row contains the exact Drive and GitHub identities. |
 | ChatGPT | Manual creation checklist and exact project instructions have been supplied. |
 | Completion | Every claimed write has separate readback; all remaining work is listed explicitly. |

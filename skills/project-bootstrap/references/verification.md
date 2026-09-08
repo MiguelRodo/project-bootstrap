@@ -19,7 +19,7 @@ Use current provider reads, not mutation responses or reconstructed URLs.
 - The remote repository README contains exactly one bounded resources block
   with the exact Drive and Project links.
 - When onboarding applies, remote `AGENTS.md` routes to
-  `github-project-admin`, the resolved `.projects/` contract contains the Drive
+  `github-projects`, the resolved `.projects/` contract contains the Drive
   source rule, and the current validator succeeds.
 - No Project fields, labels, issues or live values changed merely because the
   bootstrap ran.

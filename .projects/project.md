@@ -1,10 +1,10 @@
-# project-bootstrap Project configuration
+# projects Project configuration
 
 | Key | Value |
 | --- | --- |
 | Contract version | 1 |
 | Mode | single |
-| Issue repository | MiguelRodo/project-bootstrap |
+| Issue repository | MiguelRodo/projects |
 | Project owner | MiguelRodo |
 | Project number | 40 |
 | Project title | projects |

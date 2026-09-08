@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 
 workspace="${PJ_WORKSPACE:-$HOME/planning}"
-skill_name="github-project-admin"
+skill_name="github-projects"
+legacy_skill_name="github-project-admin"
 canonical_projects_dir="$workspace/projects"
+canonical_skill_dir="$workspace/github-projects-skill"
+
+is_canonical_skill_repo() {
+  local path="$1"
+  [ "$path" = "$canonical_projects_dir" ] || \
+  [ "$path" = "$canonical_skill_dir" ] || \
+  [ -f "$path/skills/$skill_name/SKILL.md" ] || \
+  [ -f "$path/skills/$legacy_skill_name/SKILL.md" ]
+}
 
 if ! command -v git >/dev/null 2>&1; then
   echo "pj-update-skills: git is required." >&2
@@ -65,7 +75,7 @@ update_repo() {
   if [ -n "$(git -C "$repo_path" status --porcelain)" ]; then
     echo "Stashing existing local changes..."
     if ! git -C "$repo_path" stash push -u \
-      -m "Automatic stash before github-project-admin update $(date '+%Y-%m-%d %H:%M:%S')"; then
+      -m "Automatic stash before $skill_name update $(date '+%Y-%m-%d %H:%M:%S')"; then
       echo "ERROR: could not stash local changes in $repo_name" >&2
       return 1
     fi
@@ -104,7 +114,7 @@ update_repo() {
     else
       echo "Merging $upstream..."
       if ! git -C "$repo_path" merge --no-ff "$upstream" \
-        -m "Merge $upstream before updating github-project-admin skill"; then
+        -m "Merge $upstream before updating $skill_name skill"; then
         echo "ERROR: merge failed in $repo_name; aborting merge." >&2
         git -C "$repo_path" merge --abort 2>/dev/null || true
         restore_stash "$repo_path" "$had_stash" || true
@@ -115,24 +125,29 @@ update_repo() {
     echo "WARNING: no upstream configured for $repo_name; remote sync skipped." >&2
   fi
 
-  if [ "$repo_path" = "$canonical_projects_dir" ]; then
-    echo "Canonical projects repository: skipping installed-skill refresh."
+  if is_canonical_skill_repo "$repo_path"; then
+    echo "Canonical skill repository: skipping installed-skill refresh."
   else
-    echo "Updating $skill_name..."
-    if ! (cd "$repo_path" && gh skill update "$skill_name" --all); then
+    target_skill="$skill_name"
+    if [ ! -f "$repo_path/.agents/skills/$skill_name/SKILL.md" ] && \
+       [ -f "$repo_path/.agents/skills/$legacy_skill_name/SKILL.md" ]; then
+      target_skill="$legacy_skill_name"
+    fi
+    echo "Updating $target_skill..."
+    if ! (cd "$repo_path" && gh skill update "$target_skill" --all); then
       echo "ERROR: skill update failed in $repo_name" >&2
       restore_stash "$repo_path" "$had_stash" || true
       return 1
     fi
 
-    if ! git -C "$repo_path" diff --quiet -- ".agents/skills/$skill_name" || \
-       ! git -C "$repo_path" diff --cached --quiet -- ".agents/skills/$skill_name" || \
-       [ -n "$(git -C "$repo_path" ls-files --others --exclude-standard -- ".agents/skills/$skill_name")" ]; then
-      git -C "$repo_path" add -A -- ".agents/skills/$skill_name" || {
+    if ! git -C "$repo_path" diff --quiet -- ".agents/skills/$target_skill" || \
+       ! git -C "$repo_path" diff --cached --quiet -- ".agents/skills/$target_skill" || \
+       [ -n "$(git -C "$repo_path" ls-files --others --exclude-standard -- ".agents/skills/$target_skill")" ]; then
+      git -C "$repo_path" add -A -- ".agents/skills/$target_skill" || {
         restore_stash "$repo_path" "$had_stash" || true
         return 1
       }
-      if ! git -C "$repo_path" commit -m "Update github-project-admin skill"; then
+      if ! git -C "$repo_path" commit -m "Update $target_skill skill"; then
         echo "ERROR: skill commit failed in $repo_name" >&2
         restore_stash "$repo_path" "$had_stash" || true
         return 1
@@ -178,8 +193,9 @@ found=0
 for entry in "$workspace"/*; do
   [ -d "$entry/.git" ] || continue
 
-  if [ "$entry" = "$canonical_projects_dir" ] || \
-     [ -f "$entry/.agents/skills/$skill_name/SKILL.md" ]; then
+  if is_canonical_skill_repo "$entry" || \
+     [ -f "$entry/.agents/skills/$skill_name/SKILL.md" ] || \
+     [ -f "$entry/.agents/skills/$legacy_skill_name/SKILL.md" ]; then
     found=1
     if ! update_repo "$entry"; then
       failed_count=$((failed_count + 1))

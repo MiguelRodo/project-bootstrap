@@ -282,14 +282,14 @@ write_home_context_block() {
 
 The shared local planning workspace is `${PJ_WORKSPACE:-~/planning}`. When the
 operator explicitly asks to update or refresh the installed
-`github-project-admin` skill across the managed repositories in that workspace,
+`github-projects` skill across the managed repositories in that workspace,
 run `pj-update-skills` rather than constructing an ad hoc repository loop.
 
 `pj-update-skills` temporarily stashes pre-existing local work, fetches and
 merges upstream changes with an explicit merge commit when needed, updates the
-installed `github-project-admin` skill non-interactively, commits only the skill
+installed `github-projects` skill non-interactively, commits only the skill
 refresh, pushes the branch and restores the operator's previous local work. It
-skips the installed-skill refresh in the canonical `projects` source repository.
+skips the installed-skill refresh in the canonical `github-projects-skill` source repository.
 If a repository fails to merge, update, push or restore its stash, report the
 exact repository and error rather than claiming the whole update succeeded.
 
@@ -422,19 +422,19 @@ For each such request:
    contracts available in this workspace;
 2. read and follow the target repository's root `AGENTS.md`;
 3. read `.projects/project.md` plus the one Project contract it resolves and use
-   the shared `github-project-admin` skill named by the repository guidance;
+   the shared `github-projects` skill named by the repository guidance;
 4. interpret ordinary phrases such as "add an issue to X", "set this to P3" or
    "process the implementation issues for X" through those checked contracts
    rather than inventing provider-specific task logic;
 5. preserve unrelated state, stop on consequential ambiguity, and independently
    read back every completed GitHub mutation before reporting success.
 
-If the operator explicitly asks to update or refresh `github-project-admin`
+If the operator explicitly asks to update or refresh `github-projects`
 across the local managed repositories, use `pj-update-skills`. Do not recreate a
 one-off loop unless that installed updater is unavailable. Treat this as local
 operator maintenance rather than an issue or Project mutation.
 
-For implementation-queue requests, follow `github-project-admin`'s
+For implementation-queue requests, follow `github-projects`'s
 `references/local-implementation-queue.md`, including its trust and review rules.
 A repository or Project name supplied by the operator narrows resolution to the
 corresponding managed target; do not broaden to arbitrary accessible repositories.

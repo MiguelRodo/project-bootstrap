@@ -100,7 +100,7 @@ update the bounded project-resources block described in the Drive reference,
 preserving the rest of the README.
 
 When both a repository and a GitHub Project are used, install and invoke the
-current `github-project-admin` skill from `MiguelRodo/projects`. Do not reproduce
+current `github-projects` skill from `MiguelRodo/github-projects-skill`. Do not reproduce
 its Project field, priority, routing or mutation logic here. Add the verified
 Drive README and `references/llm` links as source requirements in the one
 resolved `.projects/` contract, validate the contract, commit the onboarding

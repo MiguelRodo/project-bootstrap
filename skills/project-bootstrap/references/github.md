@@ -82,16 +82,16 @@ environment or `gh auth login`; never request or echo a token in chat.
 If a create reports an uncertain failure, inspect again. Do not blindly retry a
 create that might have succeeded.
 
-## Onboard through `github-project-admin`
+## Onboard through `github-projects`
 
 Do this only when both a repository and GitHub Project are used.
 
 From a local checkout of the project repository:
 
 ```bash
-gh skill install MiguelRodo/projects github-project-admin \
+gh skill install MiguelRodo/github-projects-skill github-projects \
   --agent universal --scope project
-bash .agents/skills/github-project-admin/scripts/init-project.sh
+bash .agents/skills/github-projects/scripts/init-project.sh
 ```
 
 The initializer owns `.projects/project.md`, multi-Project dispatching and the
@@ -111,7 +111,7 @@ that contract's Governance section using the verified URLs:
 Run its validator and preserve all other contract content:
 
 ```bash
-bash .agents/skills/github-project-admin/scripts/validate-contract.sh .
+bash .agents/skills/github-projects/scripts/validate-contract.sh .
 ```
 
 Follow the target repository's own contribution rules when committing. For a
@@ -120,5 +120,5 @@ bounded onboarding files. For an established or collaborative repository, use
 the required pull-request flow.
 
 Do not configure Class, Priority, Status, Workstream, views, labels or hierarchy
-inside this bootstrap. That is subsequent `github-project-admin` work and needs
+inside this bootstrap. That is subsequent `github-projects` work and needs
 its own requested outcome and authority.
