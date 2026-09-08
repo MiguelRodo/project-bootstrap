@@ -423,6 +423,13 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
             <p>
               If the new Project belongs to another repository, use the
               <a href="#projects-install">repository installation</a> there.
+              A repository can store its issues locally or point to a separate
+              central issue store. During onboarding, the initializer defaults
+              to the current repository while allowing an existing separate
+              issue repository to be selected. The choice is recorded in
+              <code>Issue repository</code> across single-Project and dispatcher
+              contracts while <code>AGENTS.md</code> remains the thin pointer
+              to the local contract.
               If it also needs Drive and ChatGPT resources, resume the
               <a href="#full-setup">full bootstrap path</a> with the verified
               GitHub identities. The
