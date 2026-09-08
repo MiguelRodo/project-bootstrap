@@ -21,11 +21,11 @@ bash skills/project-bootstrap/tests/run.sh
 
 Tests must not mutate live GitHub, Drive or ChatGPT resources.
 
-<!-- github-project-admin:start -->
+<!-- github-projects:start -->
 ## GitHub issues and Projects
 
 For GitHub issue or Project administration, use the shared
-`github-project-admin` skill from
-`MiguelRodo/projects/skills/github-project-admin/` and read
+`github-projects` skill from
+`MiguelRodo/github-projects-skill/skills/github-projects/` and read
 `.projects/project.md` before acting.
-<!-- github-project-admin:end -->
+<!-- github-projects:end -->

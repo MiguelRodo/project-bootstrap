@@ -16,8 +16,8 @@ git init --bare "$remote" >/dev/null || exit 1
 git init -b main "$seed" >/dev/null || exit 1
 git -C "$seed" config user.name 'Test User'
 git -C "$seed" config user.email 'test@example.invalid'
-mkdir -p "$seed/.agents/skills/github-project-admin" || exit 1
-printf 'old skill\n' > "$seed/.agents/skills/github-project-admin/SKILL.md"
+mkdir -p "$seed/.agents/skills/github-projects" || exit 1
+printf 'old skill\n' > "$seed/.agents/skills/github-projects/SKILL.md"
 printf 'remote baseline\n' > "$seed/local.txt"
 git -C "$seed" add . || exit 1
 git -C "$seed" commit -m 'Initial managed repository' >/dev/null || exit 1
@@ -38,8 +38,8 @@ if [ "$1" = 'auth' ] && [ "$2" = 'status' ]; then
 fi
 
 if [ "$1" = 'skill' ] && [ "$2" = 'update' ] && \
-   [ "$3" = 'github-project-admin' ] && [ "$4" = '--all' ]; then
-  printf 'new skill\n' > .agents/skills/github-project-admin/SKILL.md
+   [ "$3" = 'github-projects' ] && [ "$4" = '--all' ]; then
+  printf 'new skill\n' > .agents/skills/github-projects/SKILL.md
   exit 0
 fi
 
@@ -56,9 +56,9 @@ HOME="$home" \
   bash "$updater" >/dev/null || exit 1
 
 # The skill refresh was committed and pushed.
-[ "$(cat "$workspace/demo/.agents/skills/github-project-admin/SKILL.md")" = 'new skill' ] || exit 1
-[ "$(git -C "$workspace/demo" log -1 --pretty=%s)" = 'Update github-project-admin skill' ] || exit 1
-git --git-dir="$remote" show main:.agents/skills/github-project-admin/SKILL.md | grep -Fxq 'new skill' || exit 1
+[ "$(cat "$workspace/demo/.agents/skills/github-projects/SKILL.md")" = 'new skill' ] || exit 1
+[ "$(git -C "$workspace/demo" log -1 --pretty=%s)" = 'Update github-projects skill' ] || exit 1
+git --git-dir="$remote" show main:.agents/skills/github-projects/SKILL.md | grep -Fxq 'new skill' || exit 1
 
 # Pre-existing local work was restored and was not included in the pushed commit.
 [ "$(cat "$workspace/demo/local.txt")" = 'local unfinished work' ] || exit 1
@@ -70,7 +70,7 @@ HOME="$home" \
   PJ_WORKSPACE="$workspace" \
   PATH="$fake_bin:/usr/bin:/bin" \
   bash "$updater" >/dev/null || exit 1
-[ "$(git -C "$workspace/demo" log -1 --pretty=%s)" = 'Update github-project-admin skill' ] || exit 1
+[ "$(git -C "$workspace/demo" log -1 --pretty=%s)" = 'Update github-projects skill' ] || exit 1
 [ "$(cat "$workspace/demo/local.txt")" = 'local unfinished work' ] || exit 1
 
 printf 'managed skill updater tests passed\n'

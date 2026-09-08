@@ -7,10 +7,10 @@ agent and keeps its conversation open; `projects` handles supported deterministi
 GitHub Project operations. An agent started by `pj` may use that binary when it
 is installed, then follow the repository scripts or direct GitHub path when it
 is not. See the
-[`projects` CLI guide](https://github.com/MiguelRodo/projects/blob/main/docs/cli.md)
+[`projects` CLI guide](https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md)
 for installation and read-only update checks.
 
-The installer maintains bounded `pj` blocks in `~/AGENTS.md` and `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. The home-level file is the canonical cross-agent user guidance: it tells agents about local operator maintenance, including the shared skill updater, and contains user-level rules that should apply regardless of backend. The workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-project-admin`, and independently verify mutations. Content outside the managed blocks is preserved on reinstall.
+The installer maintains bounded `pj` blocks in `~/AGENTS.md` and `${PJ_WORKSPACE:-~/planning}/AGENTS.md`. The home-level file is the canonical cross-agent user guidance: it tells agents about local operator maintenance, including the shared skill updater, and contains user-level rules that should apply regardless of backend. The workspace-level file gives every backend the same natural-language GitHub task and Project vocabulary for conversational follow-ups. It tells the agent to resolve the target managed repository, read that repository's own `AGENTS.md` and `.projects` contract, follow `github-projects`, and independently verify mutations. Content outside the managed blocks is preserved on reinstall.
 
 Where it is safe to do so, the installer links each backend's documented user-level instruction entrypoint back to the same canonical `~/AGENTS.md`:
 
@@ -88,16 +88,16 @@ The installer also provides:
 pj-update-skills
 ```
 
-Run it when you want to refresh `github-project-admin` across the managed repositories under `${PJ_WORKSPACE:-~/planning}`. The updater:
+Run it when you want to refresh `github-projects` across the managed repositories under `${PJ_WORKSPACE:-~/planning}`. The updater:
 
 1. temporarily stashes existing local work in each repository;
 2. fetches upstream changes and uses an explicit non-fast-forward merge when the upstream is not already contained locally;
-3. runs `gh skill update github-project-admin --all` in repositories with the installed skill;
-4. commits only the resulting skill refresh as `Update github-project-admin skill`;
+3. runs `gh skill update github-projects --all` in repositories with the installed skill;
+4. commits only the resulting skill refresh as `Update github-projects skill`;
 5. pushes the current branch; and
 6. restores the local work it temporarily stashed.
 
-The canonical `projects` repository is synced but is not asked to update an installed copy of its own skill. A repository that cannot merge, update, push or restore its stash is reported as a failure rather than silently treated as successful.
+The canonical `github-projects-skill` repository is synced but is not asked to update an installed copy of its own skill. A repository that cannot merge, update, push or restore its stash is reported as a failure rather than silently treated as successful.
 
 Agents launched under the home or planning `AGENTS.md` guidance are told to use `pj-update-skills` when the operator explicitly asks them to update the shared skill across local repositories, instead of building another one-off shell loop.
 
@@ -111,7 +111,7 @@ pj --implement-issues
 pj --implement-chat
 ```
 
-They ask the selected backend to process trusted `pj:implement-chat` handoff issues using `github-project-admin` and the managed repositories discovered from local `.projects` contracts.
+They ask the selected backend to process trusted `pj:implement-chat` handoff issues using `github-projects` and the managed repositories discovered from local `.projects` contracts.
 
 Pass one optional repository selector with `-r` or `--repo` to restrict queue discovery:
 
@@ -131,4 +131,4 @@ pj -i -o -r projects
 pj -i -r projects --oneshot
 ```
 
-The launcher does not implement GitHub queue discovery itself. It validates and passes the optional selector to the agent, while the canonical matching, trust, mutation and readback rules remain in `github-project-admin`.
+The launcher does not implement GitHub queue discovery itself. It validates and passes the optional selector to the agent, while the canonical matching, trust, mutation and readback rules remain in `github-projects`.

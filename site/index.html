@@ -55,7 +55,7 @@
               Project.
             </p>
             <p class="hero-follow">
-              For ongoing work, the <code>github-project-admin</code> skill
+              For ongoing work, the <code>github-projects</code> skill
               applies your repository’s rules. The optional <code>projects</code>
               CLI handles the supported GitHub operations.
             </p>
@@ -63,7 +63,7 @@
               <a class="button button-primary" href="#start">Set up a project</a>
               <a
                 class="button button-secondary"
-                href="https://github.com/MiguelRodo/projects"
+                href="https://github.com/MiguelRodo/github-projects-skill"
               >See the GitHub tools</a>
             </div>
           </div>
@@ -105,19 +105,19 @@
             <p class="eyebrow">Two repositories, two jobs</p>
             <h2>The split is deliberate.</h2>
             <p>
-              <code>project-bootstrap</code> is the front door. It coordinates
+              <code>projects</code> is the front door. It coordinates
               the initial setup and supplies the local <code>pj</code> launcher.
-              <code>projects</code> handles the GitHub conventions, the reusable
-              administration skill and the optional Go CLI.
+              <code>github-projects-skill</code> handles the GitHub conventions, the reusable
+              administration skill and the optional <code>projects</code> Go CLI.
             </p>
           </div>
 
-          <div class="system-map" aria-label="How project-bootstrap and projects work together">
+          <div class="system-map" aria-label="How projects and github-projects-skill work together">
             <article class="map-card map-card-primary">
               <p class="map-number">01</p>
-              <h3>project-bootstrap</h3>
+              <h3>projects</h3>
               <p>Starts the wider project and checks that the pieces agree.</p>
-              <a href="https://github.com/MiguelRodo/project-bootstrap">
+              <a href="https://github.com/MiguelRodo/projects">
                 Open the repository <span aria-hidden="true">↗</span>
               </a>
             </article>
@@ -143,9 +143,9 @@
 
             <article class="map-card map-card-accent">
               <p class="map-number">03</p>
-              <h3>projects</h3>
+              <h3>github-projects-skill</h3>
               <p>Turns short requests into checked GitHub reads and narrow writes.</p>
-              <a href="https://github.com/MiguelRodo/projects">
+              <a href="https://github.com/MiguelRodo/github-projects-skill">
                 Open the repository <span aria-hidden="true">↗</span>
               </a>
             </article>
@@ -203,7 +203,7 @@
               </div>
               <h3>Add the GitHub workflow</h3>
               <p>
-                Install <code>github-project-admin</code> in the repository. The
+                Install <code>github-projects</code> in the repository. The
                 initialiser discovers the live Project and writes the local
                 contract. It does not change issues or Project fields.
               </p>
@@ -212,11 +212,11 @@
                   <span>Repository root</span>
                   <button type="button" data-copy-target="projects-install">Copy</button>
                 </div>
-                <pre id="projects-install"><code>gh skill install MiguelRodo/projects github-project-admin \
+                <pre id="projects-install"><code>gh skill install MiguelRodo/github-projects-skill github-projects \
   --agent universal --scope project
-bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
+bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               </div>
-              <a class="text-link" href="https://github.com/MiguelRodo/projects#2-install-the-skill-in-the-repository">
+              <a class="text-link" href="https://github.com/MiguelRodo/github-projects-skill#2-install-the-skill-in-the-repository">
                 Read the repository guide <span aria-hidden="true">→</span>
               </a>
             </article>
@@ -229,7 +229,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
               <p>
                 The <code>pj</code> installer supplies launchers for Codex,
                 GitHub Copilot CLI and Google Antigravity. Run it from a checkout
-                of <code>project-bootstrap</code>.
+                of <code>projects</code>.
               </p>
             </div>
             <div class="operator-command">
@@ -239,7 +239,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
               </div>
               <pre id="operator-install"><code>bash operator/install.sh</code></pre>
             </div>
-            <a class="button button-light" href="https://github.com/MiguelRodo/project-bootstrap/blob/main/operator/README.md">
+            <a class="button button-light" href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">
               Open the operator guide
             </a>
           </aside>
@@ -287,7 +287,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                 </p>
                 <p>
                   For local GitHub access, check <code>gh auth status</code>;
-                  the <a href="https://github.com/MiguelRodo/projects#before-you-start">GitHub prerequisites</a>
+                  the <a href="https://github.com/MiguelRodo/github-projects-skill#before-you-start">GitHub prerequisites</a>
                   cover sign-in and Project permissions. Connect the Drive and
                   GitHub apps available in your chat and check that it can open
                   the intended resources. Then ask the bootstrap skill for the
@@ -321,7 +321,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                 <h4>Connect the repository and register the project</h4>
                 <p>
                   When both GitHub resources are used, install
-                  <code>github-project-admin</code> in the repository and run
+                  <code>github-projects</code> in the repository and run
                   its <a href="#projects-install">initializer</a>. The agent
                   adds the bounded project-resources section to the repository
                   README and records required source links in the resolved
@@ -348,7 +348,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                   <code>README</code> and <code>references/llm/</code> folder
                   through the available Drive connection, and make the GitHub
                   repository accessible. Save the
-                  <a href="https://github.com/MiguelRodo/project-bootstrap/blob/main/skills/project-bootstrap/references/chatgpt-project.md">supplied Project instructions</a>:
+                  <a href="https://github.com/MiguelRodo/projects/blob/main/skills/project-bootstrap/references/chatgpt-project.md">supplied Project instructions</a>:
                   they route background questions to Drive and task operations
                   to the repository’s <code>AGENTS.md</code>, including the
                   configured local handoff.
@@ -398,7 +398,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                 <span>Existing repository root</span>
                 <button type="button" data-copy-target="add-project-command">Copy</button>
               </div>
-              <pre id="add-project-command"><code>bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
+              <pre id="add-project-command"><code>bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
             </div>
             <p>
               It preserves current routes, discovers the additional Project and
@@ -433,7 +433,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
               If it also needs Drive and ChatGPT resources, resume the
               <a href="#full-setup">full bootstrap path</a> with the verified
               GitHub identities. The
-              <a href="https://github.com/MiguelRodo/projects/blob/main/skills/github-project-admin/references/repository-contract.md">contract reference</a>
+              <a href="https://github.com/MiguelRodo/github-projects-skill/blob/main/skills/github-projects/references/repository-contract.md">contract reference</a>
               defines the routing and validation rules.
             </p>
           </article>
@@ -454,7 +454,7 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                 <p>
                   Install and authenticate one supported agent, then clone this
                   repository and run its installer. The
-                  <a href="https://github.com/MiguelRodo/project-bootstrap/blob/main/operator/README.md">operator guide</a>
+                  <a href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">operator guide</a>
                   covers PATH, backend selection and installation details.
                 </p>
                 <div class="code-block">
@@ -462,8 +462,8 @@ bash .agents/skills/github-project-admin/scripts/init-project.sh</code></pre>
                     <span>Terminal, in your chosen parent directory</span>
                     <button type="button" data-copy-target="queue-install">Copy</button>
                   </div>
-                  <pre id="queue-install"><code>gh repo clone MiguelRodo/project-bootstrap
-cd project-bootstrap
+                  <pre id="queue-install"><code>gh repo clone MiguelRodo/projects
+cd projects
 bash operator/install.sh
 gh auth status
 pj --show-default</code></pre>
@@ -487,7 +487,7 @@ pj --show-default</code></pre>
                   belongs in each participating child contract. Existing
                   installations can add it through their normal configuration
                   review. Use the
-                  <a href="https://github.com/MiguelRodo/projects/blob/main/skills/github-project-admin/references/provider-project-instructions.md">queue-aware Project instructions</a>
+                  <a href="https://github.com/MiguelRodo/github-projects-skill/blob/main/skills/github-projects/references/provider-project-instructions.md">queue-aware Project instructions</a>
                   so the chat follows the configured handoff.
                 </p>
                 <p>
@@ -537,7 +537,7 @@ pj --show-default</code></pre>
               this queue does not run a GitHub Actions bridge. The optional
               <code>projects</code> binary supplies supported administration
               commands. The
-              <a href="https://github.com/MiguelRodo/projects/blob/main/skills/github-project-admin/references/local-implementation-queue.md">shared queue reference</a>
+              <a href="https://github.com/MiguelRodo/github-projects-skill/blob/main/skills/github-projects/references/local-implementation-queue.md">shared queue reference</a>
               owns the execution rules.
             </p>
           </article>
@@ -572,10 +572,10 @@ pj --show-default</code></pre>
             </dl>
 
             <div class="inline-actions">
-              <a class="button button-primary" href="https://github.com/MiguelRodo/projects/blob/main/docs/cli.md">
+              <a class="button button-primary" href="https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md">
                 Install the CLI
               </a>
-              <a class="text-link" href="https://github.com/MiguelRodo/projects/releases">
+              <a class="text-link" href="https://github.com/MiguelRodo/github-projects-skill/releases">
                 Releases <span aria-hidden="true">↗</span>
               </a>
             </div>
@@ -628,7 +628,7 @@ pj --show-default</code></pre>
               Codex and Copilot can delegate bounded work to <code>agy</code>
               after you authorise it for the task or conversation. The primary
               agent still makes the decisions and verifies the result.
-              <a href="https://github.com/MiguelRodo/project-bootstrap/blob/main/operator/README.md">Read the permission and migration details.</a>
+              <a href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">Read the permission and migration details.</a>
             </p>
           </div>
 
@@ -701,9 +701,9 @@ pj --show-default</code></pre>
           <p>Public instructions and tools for a practical project workflow.</p>
         </div>
         <nav aria-label="Footer navigation">
-          <a href="https://github.com/MiguelRodo/project-bootstrap">project-bootstrap</a>
           <a href="https://github.com/MiguelRodo/projects">projects</a>
-          <a href="https://github.com/MiguelRodo/projects/blob/main/docs/cli.md">CLI guide</a>
+          <a href="https://github.com/MiguelRodo/github-projects-skill">github-projects-skill</a>
+          <a href="https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md">CLI guide</a>
         </nav>
       </div>
     </footer>

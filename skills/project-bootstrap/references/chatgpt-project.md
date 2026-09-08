@@ -33,7 +33,7 @@ repository or AGENTS.md is unavailable, say so rather than guessing.
 
 Treat my prompt as the desired outcome. If this chat cannot make an authorised
 GitHub issue or Project mutation, follow the resolved repository contract and
-the github-project-admin handoff. When its local Chat implementation queue is
+the github-projects handoff. When its local Chat implementation queue is
 enabled, create the small labelled handoff issue and separate unedited authority
 comment it requires so I can later run `pj -i`; report that mutation as queued,
 not completed. Only fall back to the smallest executable gh command plus an

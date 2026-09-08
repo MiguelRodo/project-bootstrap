@@ -6,7 +6,7 @@ coordinates four systems without merging their responsibilities:
 - Google Drive holds the canonical project description and LLM-oriented source
   material.
 - GitHub holds the repository, Project and authoritative work items.
-- `MiguelRodo/projects` supplies the reusable `github-project-admin` workflow.
+- `MiguelRodo/github-projects-skill` supplies the reusable `github-projects` workflow.
 - A private ChatGPT Project provides the conversational workspace.
 
 The bootstrapper creates resources directly when its current environment has
@@ -17,7 +17,7 @@ in version 1.
 
 The shorter public guide is at
 [miguelrodo.github.io/project-bootstrap](https://miguelrodo.github.io/project-bootstrap/).
-This repository remains the front door; it links to `MiguelRodo/projects` for
+This repository remains the front door; it links to `MiguelRodo/github-projects-skill` for
 the GitHub administration skill and CLI.
 
 The website includes guides for the
@@ -27,7 +27,7 @@ and [setting up the local implementation queue](https://miguelrodo.github.io/pro
 
 ## Optional `projects` CLI
 
-`MiguelRodo/projects` now has an optional Go CLI for repeated GitHub operations
+`MiguelRodo/github-projects-skill` now has an optional Go CLI for repeated GitHub operations
 that benefit from one tested implementation. It validates the existing
 `.projects/` contract and can read a complete Project item set without relying
 on `gh project item-list`'s default page.
@@ -40,14 +40,14 @@ current scripts and provider operations as fallbacks.
 `pj` also stays separate. It chooses and launches a local agent; `projects`
 performs deterministic administration. Installation and signed APT repository
 instructions are in the
-[`projects` CLI guide](https://github.com/MiguelRodo/projects/blob/main/docs/cli.md).
+[`projects` CLI guide](https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md).
 
 ## Install the skill
 
 With a current GitHub CLI:
 
 ```bash
-gh skill install MiguelRodo/project-bootstrap project-bootstrap \
+gh skill install MiguelRodo/projects project-bootstrap \
   --agent universal --scope user
 ```
 
@@ -83,7 +83,7 @@ It installs four launcher names into a sensible per-user executable directory:
 - `pjcd` always selects Codex.
 
 It also installs `pj-update-skills`, the maintenance command for refreshing the
-shared `github-project-admin` skill across managed repositories.
+shared `github-projects` skill across managed repositories.
 
 The installer prefers `~/.local/bin` when it is already on `PATH`, then `~/bin`
 when that is the configured standard user bin directory. If neither is on
@@ -184,7 +184,7 @@ pj --implement-chat
 
 The launcher itself does not contain the queue protocol. It converts the flag
 into a short request for the configured backend, which then follows the
-`github-project-admin` local implementation-queue guidance and each repository's
+`github-projects` local implementation-queue guidance and each repository's
 `AGENTS.md` and `.projects` contract.
 
 Trusted queue items created by the currently authenticated GitHub user and
@@ -365,7 +365,7 @@ files in `site/` after a change reaches `main`.
 - `work/projects/<year>/<research|lecturing>/<project-slug>/` in Google Drive;
 - a native Google Doc named `README` and a `references/llm/` folder;
 - an optional, verified GitHub repository and GitHub Project;
-- repository onboarding through `MiguelRodo/projects` when both a repository
+- repository onboarding through `MiguelRodo/github-projects-skill` when both a repository
   and Project are used;
 - a bounded project-resources section in the repository README;
 - one verified row in the task system's Projects registry; and
