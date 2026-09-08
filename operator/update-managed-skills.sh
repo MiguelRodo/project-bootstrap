@@ -3,15 +3,15 @@
 workspace="${PJ_WORKSPACE:-$HOME/planning}"
 skill_name="github-projects"
 legacy_skill_name="github-project-admin"
-canonical_projects_dir="$workspace/projects"
 canonical_skill_dir="$workspace/github-projects-skill"
+canonical_skill_repo="MiguelRodo/github-projects-skill"
 
 is_canonical_skill_repo() {
   local path="$1"
-  [ "$path" = "$canonical_projects_dir" ] || \
   [ "$path" = "$canonical_skill_dir" ] || \
   [ -f "$path/skills/$skill_name/SKILL.md" ] || \
-  [ -f "$path/skills/$legacy_skill_name/SKILL.md" ]
+  [ -f "$path/skills/$legacy_skill_name/SKILL.md" ] || \
+  git -C "$path" remote get-url origin 2>/dev/null | grep -Eq '(github-projects-skill|MiguelRodo/projects-skill)'
 }
 
 if ! command -v git >/dev/null 2>&1; then
@@ -128,26 +128,53 @@ update_repo() {
   if is_canonical_skill_repo "$repo_path"; then
     echo "Canonical skill repository: skipping installed-skill refresh."
   else
-    target_skill="$skill_name"
-    if [ ! -f "$repo_path/.agents/skills/$skill_name/SKILL.md" ] && \
+    local legacy_installed=0
+    if [ -d "$repo_path/.agents/skills/$legacy_skill_name" ] || \
        [ -f "$repo_path/.agents/skills/$legacy_skill_name/SKILL.md" ]; then
-      target_skill="$legacy_skill_name"
-    fi
-    echo "Updating $target_skill..."
-    if ! (cd "$repo_path" && gh skill update "$target_skill" --all); then
-      echo "ERROR: skill update failed in $repo_name" >&2
-      restore_stash "$repo_path" "$had_stash" || true
-      return 1
+      legacy_installed=1
     fi
 
-    if ! git -C "$repo_path" diff --quiet -- ".agents/skills/$target_skill" || \
-       ! git -C "$repo_path" diff --cached --quiet -- ".agents/skills/$target_skill" || \
-       [ -n "$(git -C "$repo_path" ls-files --others --exclude-standard -- ".agents/skills/$target_skill")" ]; then
-      git -C "$repo_path" add -A -- ".agents/skills/$target_skill" || {
+    local needs_migration=0
+    if [ "$legacy_installed" -eq 1 ]; then
+      needs_migration=1
+    elif [ ! -f "$repo_path/.agents/skills/$skill_name/SKILL.md" ]; then
+      needs_migration=1
+    elif grep -Fq 'github-repo: https://github.com/MiguelRodo/projects' "$repo_path/.agents/skills/$skill_name/SKILL.md" 2>/dev/null; then
+      needs_migration=1
+    fi
+
+    if [ "$needs_migration" -eq 1 ]; then
+      echo "Migrating skill to $skill_name from $canonical_skill_repo..."
+      if [ -e "$repo_path/.agents/skills/$legacy_skill_name" ]; then
+        rm -rf "$repo_path/.agents/skills/$legacy_skill_name"
+      fi
+
+      if ! (cd "$repo_path" && gh skill install "$canonical_skill_repo" "$skill_name" --agent universal --scope project --force); then
+        echo "ERROR: skill installation/migration failed in $repo_name" >&2
+        restore_stash "$repo_path" "$had_stash" || true
+        return 1
+      fi
+    else
+      echo "Updating $skill_name..."
+      if ! (cd "$repo_path" && gh skill update "$skill_name" --all); then
+        echo "ERROR: skill update failed in $repo_name" >&2
+        restore_stash "$repo_path" "$had_stash" || true
+        return 1
+      fi
+    fi
+
+    if [ -e "$repo_path/.agents/skills/$legacy_skill_name" ]; then
+      rm -rf "$repo_path/.agents/skills/$legacy_skill_name"
+    fi
+
+    if ! git -C "$repo_path" diff --quiet -- ".agents/skills" || \
+       ! git -C "$repo_path" diff --cached --quiet -- ".agents/skills" || \
+       [ -n "$(git -C "$repo_path" ls-files --others --exclude-standard -- ".agents/skills")" ]; then
+      git -C "$repo_path" add -A -- ".agents/skills" || {
         restore_stash "$repo_path" "$had_stash" || true
         return 1
       }
-      if ! git -C "$repo_path" commit -m "Update $target_skill skill"; then
+      if ! git -C "$repo_path" commit -m "Update $skill_name skill"; then
         echo "ERROR: skill commit failed in $repo_name" >&2
         restore_stash "$repo_path" "$had_stash" || true
         return 1
