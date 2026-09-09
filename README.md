@@ -68,11 +68,22 @@ this repository and ask it to follow [`PROJECT_BOOTSTRAP.md`](PROJECT_BOOTSTRAP.
 
 ## One-time local operator launcher
 
-Operator bootstrap is separate from creating an individual project. Run the
-installer once per machine from a checkout of this repository:
+Operator bootstrap is separate from creating an individual project. The local
+operator tooling (`pj`, `pja`, `pjcp`, `pjcd`, `pj-update-skills`) is maintained
+in its standalone canonical repository [`MiguelRodo/pj`](https://github.com/MiguelRodo/pj).
+
+Run the installer once per machine from a checkout of `MiguelRodo/pj`:
 
 ```bash
-bash operator/install.sh
+git clone https://github.com/MiguelRodo/pj.git
+cd pj
+bash install.sh
+```
+
+Alternatively, if `setupmjr` is installed:
+
+```bash
+setupmjr project --pj
 ```
 
 It installs four launcher names into a sensible per-user executable directory:
@@ -97,8 +108,8 @@ Set `PJ_BIN_DIR` to choose a different absolute or home-relative location for an
 install, for example:
 
 ```bash
-PJ_BIN_DIR='~/.local/bin' bash operator/install.sh
-PJ_BIN_DIR='~/tools/bin' bash operator/install.sh
+PJ_BIN_DIR='~/.local/bin' bash install.sh
+PJ_BIN_DIR='~/tools/bin' bash install.sh
 ```
 
 A new install starts with Codex as the `pj` default. Change or inspect that saved
@@ -270,7 +281,7 @@ uses `--add-dir`, and the primary agent may satisfy a narrowly scoped headless
 permission request on the operator's behalf. Broad wildcard permissions and
 `--dangerously-skip-permissions` remain separately gated. The installer also
 maintains a Codex exec-policy rule allowing the `agy` executable. See
-[`operator/README.md`](operator/README.md) for migration and permission details.
+[`MiguelRodo/pj`](https://github.com/MiguelRodo/pj) for migration and permission details.
 The workspace defaults to `~/planning` and can be changed with `PJ_WORKSPACE`.
 An absolute path or a quoted `~/...` path is accepted.
 
@@ -339,12 +350,6 @@ Repository `AGENTS.md` and `.projects` contracts remain the source of
 Project-administration behaviour for every backend rather than provider-specific
 copies of the task model.
 
-Run the offline launcher checks with:
-
-```bash
-bash operator/tests/run.sh
-```
-
 Check the public website with:
 
 ```bash
@@ -381,7 +386,6 @@ live in [`skills/project-bootstrap/SKILL.md`](skills/project-bootstrap/SKILL.md)
 | --- | --- |
 | `PROJECT_BOOTSTRAP.md` | Human-readable workflow and postconditions. |
 | `skills/project-bootstrap/` | Installable Agent Skill. |
-| `operator/` | One-time local `pj`/`pja`/`pjcp`/`pjcd` launcher, skill updater and installer. |
 | `site/` | Public guide deployed through GitHub Pages. |
 | `templates/drive-readme.md` | Minimal native Google Doc README shape. |
 | `templates/repository-resources.md` | Bounded repository README section. |

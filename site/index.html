@@ -229,7 +229,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               <p>
                 The <code>pj</code> installer supplies launchers for Codex,
                 GitHub Copilot CLI and Google Antigravity. Run it from a checkout
-                of <code>projects</code>.
+                of <code>pj</code> or via <code>setupmjr</code>.
               </p>
             </div>
             <div class="operator-command">
@@ -237,9 +237,9 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
                 <span>Terminal</span>
                 <button type="button" data-copy-target="operator-install">Copy</button>
               </div>
-              <pre id="operator-install"><code>bash operator/install.sh</code></pre>
+              <pre id="operator-install"><code>setupmjr project --pj</code></pre>
             </div>
-            <a class="button button-light" href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">
+            <a class="button button-light" href="https://github.com/MiguelRodo/pj">
               Open the operator guide
             </a>
           </aside>
@@ -452,9 +452,9 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               <li>
                 <h4>Install the launcher and prepare its workspace</h4>
                 <p>
-                  Install and authenticate one supported agent, then clone this
-                  repository and run its installer. The
-                  <a href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">operator guide</a>
+                  Install and authenticate one supported agent, then install the
+                  launcher from <code>MiguelRodo/pj</code> or via <code>setupmjr</code>. The
+                  <a href="https://github.com/MiguelRodo/pj">operator guide</a>
                   covers PATH, backend selection and installation details.
                 </p>
                 <div class="code-block">
@@ -462,9 +462,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
                     <span>Terminal, in your chosen parent directory</span>
                     <button type="button" data-copy-target="queue-install">Copy</button>
                   </div>
-                  <pre id="queue-install"><code>gh repo clone MiguelRodo/projects
-cd projects
-bash operator/install.sh
+                  <pre id="queue-install"><code>setupmjr project --pj
 gh auth status
 pj --show-default</code></pre>
                 </div>
@@ -628,7 +626,7 @@ pj --show-default</code></pre>
               Codex and Copilot can delegate bounded work to <code>agy</code>
               after you authorise it for the task or conversation. The primary
               agent still makes the decisions and verifies the result.
-              <a href="https://github.com/MiguelRodo/projects/blob/main/operator/README.md">Read the permission and migration details.</a>
+              <a href="https://github.com/MiguelRodo/pj">Read the permission and migration details.</a>
             </p>
           </div>
 

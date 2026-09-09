@@ -16,13 +16,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run project bootstrap offline tests
         run: bash skills/project-bootstrap/tests/run.sh
-      - name: Run operator launcher offline tests
-        run: bash operator/tests/run.sh
-      - name: Run pj queue option tests
-        run: bash operator/tests/queue-options.sh
-      - name: Run workspace AGENTS context tests
-        run: bash operator/tests/workspace-context.sh
-      - name: Run managed skill updater tests
-        run: bash operator/tests/update-managed-skills.sh
       - name: Check the public website
         run: bash tests/site.sh
