@@ -16,14 +16,14 @@ the user runs it. ChatGPT Project creation remains a verified manual checklist
 in version 1.
 
 The shorter public guide is at
-[miguelrodo.github.io/project-bootstrap](https://miguelrodo.github.io/project-bootstrap/).
+[miguelrodo.github.io/projects](https://miguelrodo.github.io/projects/).
 This repository remains the front door; it links to `MiguelRodo/github-projects-skill` for
 the GitHub administration skill and CLI.
 
 The website includes guides for the
-[full Drive, registry and ChatGPT setup](https://miguelrodo.github.io/project-bootstrap/#full-setup),
-[adding another GitHub Project](https://miguelrodo.github.io/project-bootstrap/#add-project)
-and [setting up the local implementation queue](https://miguelrodo.github.io/project-bootstrap/#implementation-queue).
+[full Drive, registry and ChatGPT setup](https://miguelrodo.github.io/projects/#full-setup),
+[adding another GitHub Project](https://miguelrodo.github.io/projects/#add-project)
+and [setting up the local implementation queue](https://miguelrodo.github.io/projects/#implementation-queue).
 
 ## Optional `projects` CLI
 
