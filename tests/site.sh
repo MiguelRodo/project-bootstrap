@@ -103,7 +103,31 @@ public_text = "\n".join(
     for path in sorted(site.rglob("*"))
     if path.is_file()
 )
-for forbidden in ("/home/mrodo", "ghp_", "github_pat_", "scroll-behaviour", "optimiseLegibility"):
+
+for required in (
+    "https://miguelrodo.github.io/projects/",
+    "MiguelRodo/projects",
+    "MiguelRodo/github-projects-skill",
+    "github-projects",
+    "MiguelRodo/pj",
+    "pj --update-skill",
+    "setupmjr project --pj",
+):
+    if required not in public_text:
+        errors.append(f"public site is missing final ecosystem reference: {required}")
+
+for forbidden in (
+    "/home/mrodo",
+    "ghp_",
+    "github_pat_",
+    "scroll-behaviour",
+    "optimiseLegibility",
+    "https://miguelrodo.github.io/project-bootstrap",
+    "https://github.com/MiguelRodo/project-bootstrap",
+    "aria-label=\"Project bootstrap, home\"",
+    "<span>project bootstrap</span>",
+    "supplies the local <code>pj</code> launcher",
+):
     if forbidden in public_text:
         errors.append(f"public site contains forbidden text: {forbidden}")
 
