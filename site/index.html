@@ -6,16 +6,16 @@
     <meta name="theme-color" content="#123c3a">
     <meta
       name="description"
-      content="Set up a project across Drive, GitHub and ChatGPT, then manage its GitHub work through checked contracts and a plan-first CLI."
+      content="Projects is the front door for a project lifecycle across Drive, GitHub and ChatGPT, with standalone GitHub administration and local agent tooling kept in their own repositories."
     >
-    <meta property="og:title" content="Project bootstrap">
+    <meta property="og:title" content="Projects">
     <meta
       property="og:description"
-      content="A practical way to set up projects and keep GitHub issue work easy to direct."
+      content="Set up a project across systems, then manage GitHub work through checked contracts and maintained tools."
     >
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://miguelrodo.github.io/projects/">
-    <title>Project bootstrap — set up the project, then keep it moving</title>
+    <title>Projects - project lifecycle across Drive, GitHub and ChatGPT</title>
     <link rel="icon" href="./mark.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
     <script src="./script.js" defer></script>
@@ -25,9 +25,9 @@
 
     <header class="site-header">
       <div class="shell header-inner">
-        <a class="brand" href="#top" aria-label="Project bootstrap, home">
-          <span class="brand-mark" aria-hidden="true">pb</span>
-          <span>project bootstrap</span>
+        <a class="brand" href="#top" aria-label="Projects, home">
+          <span class="brand-mark" aria-hidden="true">p</span>
+          <span>projects</span>
         </a>
         <nav aria-label="Main navigation">
           <a href="#how-it-fits">How it fits</a>
@@ -46,18 +46,20 @@
       <section class="hero" id="top">
         <div class="shell hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow">Project setup that agents can follow</p>
-            <h1>Set up a project. Keep its GitHub work in order.</h1>
+            <p class="eyebrow">Cross-system project lifecycle</p>
+            <h1>Set up the whole project. Keep each system in its lane.</h1>
             <p class="hero-lede">
-              Project bootstrap follows one setup procedure for a research or
-              teaching project. Drive holds its description; GitHub holds its
-              code and tasks. There is also a manual hand-off for the ChatGPT
-              Project.
+              <code>projects</code> is the front door for a research or teaching
+              project across Drive, GitHub, the project registry and a ChatGPT
+              Project hand-off. Its <code>project-bootstrap</code> skill follows
+              one checked setup procedure and can resume or audit an existing
+              arrangement.
             </p>
             <p class="hero-follow">
-              For ongoing work, the <code>github-projects</code> skill
-              applies your repository’s rules. The optional <code>projects</code>
-              CLI handles the supported GitHub operations.
+              Ongoing GitHub administration belongs to the standalone
+              <code>github-projects</code> skill and optional <code>projects</code>
+              CLI. Local agent launching belongs to the standalone
+              <code>pj</code> tool.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#start">Set up a project</a>
@@ -102,13 +104,16 @@
       <section class="section section-map" id="how-it-fits">
         <div class="shell">
           <div class="section-heading narrow">
-            <p class="eyebrow">Two repositories, two jobs</p>
+            <p class="eyebrow">Clear ownership boundaries</p>
             <h2>The split is deliberate.</h2>
             <p>
-              <code>projects</code> is the front door. It coordinates
-              the initial setup and supplies the local <code>pj</code> launcher.
-              <code>github-projects-skill</code> handles the GitHub conventions, the reusable
-              administration skill and the optional <code>projects</code> Go CLI.
+              <code>projects</code> coordinates the cross-system project lifecycle.
+              <code>github-projects-skill</code> independently owns reusable GitHub
+              issue and Project administration, the <code>.projects</code> contract
+              model and the optional <code>projects</code> Go CLI. <code>pj</code>
+              is a separate local agent launcher and maintenance tool in
+              <code>MiguelRodo/pj</code>. <code>setupmjr</code> may install or
+              configure these tools, but does not own their implementations.
             </p>
           </div>
 
@@ -155,7 +160,8 @@
             <p>
               The agent interprets your request using the skill. The contract
               sets its scope. The CLI handles repeated GitHub calls where one
-              tested command saves the agent work.
+              tested command saves the agent work. None of those GitHub tools
+              require the wider <code>projects</code> lifecycle workflow.
             </p>
           </div>
         </div>
@@ -176,7 +182,8 @@
               </div>
               <h3>Set up the whole project</h3>
               <p>
-                Install the bootstrap skill once, then ask for the outcome in
+                Install the <code>project-bootstrap</code> skill from
+                <code>MiguelRodo/projects</code> once, then ask for the outcome in
                 ordinary language. The same skill can resume a partial setup or
                 check an existing one.
               </p>
@@ -225,11 +232,15 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
           <aside class="operator-strip">
             <div>
               <p class="eyebrow">Working locally</p>
-              <h3>Use the same workspace with the agent you prefer.</h3>
+              <h3><code>pj</code> is standalone too.</h3>
               <p>
-                The <code>pj</code> installer supplies launchers for Codex,
-                GitHub Copilot CLI and Google Antigravity. Run it from a checkout
-                of <code>pj</code> or via <code>setupmjr</code>.
+                <code>MiguelRodo/pj</code> owns the launcher, installer and local
+                maintenance workflow for Codex, GitHub Copilot CLI and Google
+                Antigravity. Install it directly or let <code>setupmjr</code>
+                invoke its canonical installer. Refresh the managed
+                <code>github-projects</code> skill with
+                <code>pj --update-skill</code>; the older
+                <code>pj-update-skills</code> command is only a compatibility shim.
               </p>
             </div>
             <div class="operator-command">
@@ -237,7 +248,8 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
                 <span>Terminal</span>
                 <button type="button" data-copy-target="operator-install">Copy</button>
               </div>
-              <pre id="operator-install"><code>setupmjr project --pj</code></pre>
+              <pre id="operator-install"><code>setupmjr project --pj
+pj --update-skill</code></pre>
             </div>
             <a class="button button-light" href="https://github.com/MiguelRodo/pj">
               Open the operator guide
@@ -277,7 +289,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               <li>
                 <h4>Prepare access and review the proposed setup</h4>
                 <p>
-                  Install the <a href="#bootstrap-install">bootstrap skill</a>.
+                  Install the <a href="#bootstrap-install"><code>project-bootstrap</code> skill</a>.
                   Give the chosen agent authenticated access to GitHub, Google
                   Drive and your task system’s <code>Global tasks</code>
                   spreadsheet. The spreadsheet’s <code>Projects</code> tab is
@@ -322,7 +334,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
                 <p>
                   When both GitHub resources are used, install
                   <code>github-projects</code> in the repository and run
-                  its <a href="#projects-install">initializer</a>. The agent
+                  its <a href="#projects-install">initialiser</a>. The agent
                   adds the bounded project-resources section to the repository
                   README and records required source links in the resolved
                   contract, within the repository’s privacy rules. Private
@@ -391,7 +403,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               Have its owner and Project number ready. An existing multi-Project
               setup has <code>Mode | dispatcher</code> in
               <code>.projects/project.md</code> and one child contract per
-              Project. Rerun the installed initializer:
+              Project. Rerun the installed initialiser:
             </p>
             <div class="code-block">
               <div class="code-heading">
@@ -404,14 +416,14 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               It preserves current routes, discovers the additional Project and
               asks for its unique Project key and routing label. The new child
               contract lives under <code>.projects/projects/</code>. The
-              initializer validates the result and offers to commit and push
+              initialiser validates the result and offers to commit and push
               the onboarding files. Review that diff through your repository’s
               normal workflow, confirm the new Priority mapping and have the
               agent verify live routing and membership before using the route.
-              The initializer itself changes repository files only.
+              The initialiser itself changes repository files only.
             </p>
             <p>
-              For <code>Mode | single</code>, rerunning the initializer
+              For <code>Mode | single</code>, rerunning the initialiser
               preserves the current setup and exits. Ask the agent to propose
               a conversion to a dispatcher: preserve the first Project’s
               mappings and governance in a child contract, add distinct routes
@@ -424,7 +436,7 @@ bash .agents/skills/github-projects/scripts/init-project.sh</code></pre>
               If the new Project belongs to another repository, use the
               <a href="#projects-install">repository installation</a> there.
               A repository can store its issues locally or point to a separate
-              central issue store. During onboarding, the initializer defaults
+              central issue store. During onboarding, the initialiser defaults
               to the current repository while allowing an existing separate
               issue repository to be selected. The choice is recorded in
               <code>Issue repository</code> across single-Project and dispatcher
@@ -587,20 +599,20 @@ pj --show-default</code></pre>
             <div class="terminal-body">
               <div class="terminal-example">
                 <p>Create an issue and set its starting fields</p>
-                <code><span class="prompt">$</span> projects issue create \</code>
-                <code>    --title "Add telemetry preflight" \</code>
+                <code><span class="prompt">$</span> projects issue create \\</code>
+                <code>    --title "Add telemetry preflight" \\</code>
                 <code>    --priority P1 --class Task --status Todo</code>
                 <span class="terminal-output">Plan only. Supply --apply to create the issue on GitHub.</span>
               </div>
               <div class="terminal-example">
                 <p>Apply the same checked request</p>
-                <code><span class="prompt">$</span> projects issue create \</code>
-                <code>    --title "Add telemetry preflight" \</code>
+                <code><span class="prompt">$</span> projects issue create \\</code>
+                <code>    --title "Add telemetry preflight" \\</code>
                 <code>    --priority P1 --class Task --status Todo --apply</code>
               </div>
               <div class="terminal-example terminal-example-last">
                 <p>Update one existing Project item</p>
-                <code><span class="prompt">$</span> projects project item-edit \</code>
+                <code><span class="prompt">$</span> projects project item-edit \\</code>
                 <code>    --issue 139 --priority P2 --status "In progress" --apply</code>
               </div>
             </div>
@@ -614,13 +626,17 @@ pj --show-default</code></pre>
             <p class="eyebrow">One home-level policy</p>
             <h2>Your agents can read the same standing instructions.</h2>
             <p>
-              The operator installer treats <code>~/AGENTS.md</code> as the
-              canonical user guidance. New or installer-owned backend files link
-              to it through the filename each supported agent expects.
+              The standalone <code>pj</code> installer treats
+              <code>~/AGENTS.md</code> as the canonical user guidance. New or
+              installer-owned backend files link to it through the filename each
+              supported agent expects.
             </p>
             <p>
               A regular file with custom instructions keeps its text; only its
               managed block is refreshed. An unrelated symlink is left alone.
+              When you explicitly want to refresh the shared GitHub skill across
+              the managed workspace, the canonical command is
+              <code>pj --update-skill</code>.
             </p>
             <p>
               Codex and Copilot can delegate bounded work to <code>agy</code>
@@ -649,7 +665,7 @@ pj --show-default</code></pre>
         <div class="shell answers-grid">
           <div class="section-heading">
             <p class="eyebrow">A few straight answers</p>
-            <h2>What this does — and what it does not.</h2>
+            <h2>What this does, and what it does not.</h2>
           </div>
 
           <div class="answers">
@@ -670,7 +686,7 @@ pj --show-default</code></pre>
               </p>
             </details>
             <details>
-              <summary>Does bootstrap create the ChatGPT Project?</summary>
+              <summary>Does the project-bootstrap skill create the ChatGPT Project?</summary>
               <p>
                 Version 1 leaves that step as a checked manual hand-off. The
                 procedure gives you the exact setup and verification steps.
@@ -693,14 +709,15 @@ pj --show-default</code></pre>
       <div class="shell footer-inner">
         <div>
           <a class="brand footer-brand" href="#top">
-            <span class="brand-mark" aria-hidden="true">pb</span>
-            <span>project bootstrap</span>
+            <span class="brand-mark" aria-hidden="true">p</span>
+            <span>projects</span>
           </a>
           <p>Public instructions and tools for a practical project workflow.</p>
         </div>
         <nav aria-label="Footer navigation">
           <a href="https://github.com/MiguelRodo/projects">projects</a>
           <a href="https://github.com/MiguelRodo/github-projects-skill">github-projects-skill</a>
+          <a href="https://github.com/MiguelRodo/pj">pj</a>
           <a href="https://github.com/MiguelRodo/github-projects-skill/blob/main/docs/cli.md">CLI guide</a>
         </nav>
       </div>
