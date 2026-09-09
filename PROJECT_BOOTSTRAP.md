@@ -133,10 +133,12 @@ work.
 - GitHub issues remain concrete actions or outcomes, not duplicate project
   descriptions.
 - Google Drive is project background, not a parallel task tracker.
-- `MiguelRodo/projects` remains the general GitHub administration system.
-- Its optional `projects` Go CLI may perform supported GitHub operations. It
-  does not replace this cross-system bootstrap workflow or create a second
-  project-bootstrap contract.
+- `MiguelRodo/github-projects-skill` owns reusable GitHub issue and Project
+  administration and the deterministic `projects` Go CLI.
+- `MiguelRodo/projects` owns cross-system bootstrap and orchestration across
+  Drive, the Projects registry, GitHub and ChatGPT Project handoff.
+- The optional `projects` Go CLI does not replace this cross-system bootstrap
+  workflow or create a second project-bootstrap contract.
 - This public repository contains no private identifiers, credentials or
   project-specific contact information.
 - Tokens are never requested in chat, printed, committed or written to Drive.

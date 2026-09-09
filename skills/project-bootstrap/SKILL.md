@@ -12,7 +12,10 @@ postconditions below and perform only missing or explicitly corrected work.
 
 - Google Drive holds project definition and source material.
 - GitHub issues and Projects hold live work and state.
-- `MiguelRodo/projects` owns reusable GitHub issue and Project administration.
+- `MiguelRodo/github-projects-skill` owns reusable GitHub issue and Project
+  administration and the deterministic `projects` Go CLI.
+- `MiguelRodo/projects` owns cross-system bootstrap and orchestration across
+  Drive, the Projects registry, GitHub and ChatGPT Project handoff.
 - The optional `projects` Go CLI may execute a supported GitHub operation. It is
   not the bootstrap workflow and must not become a required dependency.
 - This skill coordinates those systems and supplies the manual ChatGPT Project
